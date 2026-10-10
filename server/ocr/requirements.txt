@@ -1,0 +1,13 @@
+# Python dependencies for the PaddleOCR worker (server/ocr/paddle_ocr_worker.py)
+#
+# PaddleOCR >= 3.0 ships the PP-OCRv5 multilingual "devanagari" recognition
+# model, which supports BOTH Marathi and English - so one engine covers mixed
+# English-Marathi scanned legal documents.
+#
+# Install into the Python environment used by the server (see README):
+#   python -m pip install -r server/ocr/requirements.txt
+#
+# PyMuPDF is used to render scanned PDF pages to images for OCR.
+
+paddleocr>=3.0
+pymupdf>=1.24

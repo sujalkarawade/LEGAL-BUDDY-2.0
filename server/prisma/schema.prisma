@@ -1,0 +1,207 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String              @id @default(uuid())
+  email          String              @unique
+  passwordHash   String
+  name           String
+  role           String              @default("USER") // USER, LAWYER
+  organization   String?             @default("Independent")
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  documents      Document[]
+  conversations  ChatConversation[]
+  generatedDocs  GeneratedDocument[]
+
+  @@map("users")
+}
+
+model Document {
+  id                 String               @id @default(uuid())
+  userId             String
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  originalName       String
+  storedName         String
+  filePath           String
+  fileSize           Int
+  mimeType           String
+  pageCount          Int                  @default(0)
+  status             String               @default("UPLOADED") // UPLOADED, PROCESSING, COMPLETED, FAILED
+  errorMessage       String?
+  extractedText      String?              @db.Text
+  analysisMode       String               @default("auto") // "llm" or "heuristic"
+  ocrMetadata        String?              @db.Text // JSON string of per-page OCR analysis
+  ocrStatus          String?              @default("NONE") // NONE, PENDING_REVIEW, VERIFIED, COMPLETED, FAILED
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  chunks             DocumentChunk[]
+  summary            ContractSummary?
+  clauses            ClauseFinding[]
+  completenessChecks CompletenessCheck[]
+  obligations        ExtractedObligation[]
+  conversations      ChatConversation[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("documents")
+}
+
+model DocumentChunk {
+  id         String   @id @default(uuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  chunkIndex Int
+  pageNumber Int
+  content    String   @db.Text
+  createdAt  DateTime @default(now())
+
+  @@index([documentId])
+  @@map("document_chunks")
+}
+
+model ContractSummary {
+  id                    String   @id @default(uuid())
+  documentId            String   @unique
+  document              Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  contractType          String
+  parties               String   @db.Text // JSON or structured string of parties
+  purpose               String   @db.Text
+  effectiveDate         String?
+  endDate               String?
+  paymentTerms          String?  @db.Text
+  responsibilities      String?  @db.Text
+  terminationConditions String?  @db.Text
+  confidentialityTerms  String?  @db.Text
+  liabilityTerms        String?  @db.Text
+  renewalProvisions     String?  @db.Text
+  importantDeadlines    String?  @db.Text
+  missingInfo           String?  @db.Text
+  rawSummary            String?  @db.Text
+  analysisProvider      String   @default("rule_engine") // gemini, openai, rule_engine
+  createdAt             DateTime @default(now())
+
+  @@map("contract_summaries")
+}
+
+model ClauseFinding {
+  id                       String   @id @default(uuid())
+  documentId               String
+  document                 Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  category                 String   // Payment, Termination, Confidentiality, Liability, IP, Dispute Resolution, Governing Law, Renewal, Penalties, Data Protection
+  title                    String
+  excerpt                  String   @db.Text
+  pageNumber               Int?
+  plainLanguageExplanation String   @db.Text
+  riskLevel                String   // Low, Medium, High, Needs Review
+  potentialConcern         String?  @db.Text
+  reviewQuestion           String?  @db.Text
+  reviewStatus             String   @default("PENDING") // PENDING, APPROVED, FLAGGED
+  createdAt                DateTime @default(now())
+
+  @@index([documentId])
+  @@index([category])
+  @@index([riskLevel])
+  @@map("clause_findings")
+}
+
+model CompletenessCheck {
+  id              String   @id @default(uuid())
+  documentId      String
+  document        Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  contractCategory String  @default("General Commercial Contract")
+  expectedSection String
+  detectedTitle   String?
+  status          String   // FOUND, NOT_FOUND, NEEDS_REVIEW
+  excerpt         String?  @db.Text
+  pageNumber      Int?
+  reason          String   @db.Text
+  isReviewed      Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  @@index([documentId])
+  @@map("completeness_checks")
+}
+
+model ExtractedObligation {
+  id               String   @id @default(uuid())
+  documentId       String
+  document         Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  category         String   // Payment, Renewal, Termination Notice, Delivery, Reporting
+  description      String   @db.Text
+  responsibleParty String?
+  dueDateOrPeriod  String?
+  isCalendarDate   Boolean  @default(false)
+  excerpt          String?  @db.Text
+  pageNumber       Int?
+  confidence       String   @default("HIGH") // HIGH, MEDIUM, LOW
+  reviewStatus     String   @default("UNREVIEWED") // UNREVIEWED, ACKNOWLEDGED, DISMISSED
+  createdAt        DateTime @default(now())
+
+  @@index([documentId])
+  @@index([category])
+  @@map("extracted_obligations")
+}
+
+model ChatConversation {
+  id         String        @id @default(uuid())
+  documentId String
+  document   Document      @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title      String        @default("Contract Q&A Session")
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  messages   ChatMessage[]
+
+  @@index([documentId])
+  @@index([userId])
+  @@map("chat_conversations")
+}
+
+model ChatMessage {
+  id              String           @id @default(uuid())
+  conversationId  String
+  conversation    ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role            String           // user, assistant, system
+  content         String           @db.Text
+  sourceCitations String?          @db.Text // JSON string: [{ excerpt, pageNumber, score }]
+  createdAt       DateTime         @default(now())
+
+  @@index([conversationId])
+  @@map("chat_messages")
+}
+
+model DocumentTemplate {
+  id           String   @id @default(uuid())
+  title        String
+  category     String
+  description  String   @db.Text
+  schemaJson   String   @db.Text // JSON array of field configurations
+  templateText String   @db.Text // Template text with {{field}} tags
+  createdAt    DateTime @default(now())
+
+  @@map("document_templates")
+}
+
+model GeneratedDocument {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  templateId      String?
+  title           String
+  category        String
+  inputDataJson   String   @db.Text
+  renderedContent String   @db.Text
+  docxFileName    String?
+  createdAt       DateTime @default(now())
+
+  @@index([userId])
+  @@map("generated_documents")
+}
