@@ -6,10 +6,259 @@ import { PdfService } from '../services/pdf-service.js';
 import { AIAdapter } from '../services/ai/ai-adapter.js';
 import { PaddleOcrService } from '../services/ocr/paddle-ocr.service.js';
 import { PageOcrMetadata } from '../services/ocr/ocr.types.js';
+import { JobQueueService } from '../services/job-queue.service.js';
 
 export class DocumentController {
   /**
-   * Upload and process a new PDF contract
+   * Internal asynchronous document processor for background and synchronous jobs
+   */
+  static async processDocumentAsync(
+    documentId: string,
+    filePath: string,
+    originalName: string,
+    jobId?: string,
+    options?: { forcePageNumbers?: number[]; bypassCache?: boolean }
+  ): Promise<any> {
+    try {
+      if (jobId) {
+        JobQueueService.updateProgress(jobId, 0, 1, 'Auditing document pages for selectable text and scans...');
+      }
+
+      // 1. Extract text with progress streaming
+      const extraction = await PdfService.extractText(
+        filePath,
+        (p) => {
+          if (jobId) {
+            JobQueueService.updateProgress(jobId, p.completedPages, p.totalPages, p.stage, {
+              scannedPagesCount: p.scannedCount,
+              selectablePagesCount: p.selectableCount,
+            });
+          }
+        },
+        options
+      );
+
+      const ocrMetaJson = JSON.stringify(extraction.ocrResult);
+      const ocrStatus = extraction.ocrResult.hasLowConfidencePages
+        ? 'PENDING_REVIEW'
+        : extraction.ocrResult.scannedPagesCount > 0
+        ? 'OCR_COMPLETED'
+        : 'VERIFIED';
+
+      // If document is empty / unreadable
+      if (extraction.isScannedOrEmpty) {
+        const docWithWarning = await prisma.document.update({
+          where: { id: documentId },
+          data: {
+            status: 'COMPLETED',
+            ocrStatus: 'PENDING_REVIEW',
+            ocrMetadata: ocrMetaJson,
+            pageCount: extraction.pageCount,
+            extractedText: extraction.text,
+            errorMessage: extraction.warningMessage,
+          },
+        });
+
+        if (jobId) {
+          JobQueueService.completeJob(jobId, {
+            documentId,
+            pageCount: extraction.pageCount,
+            ocrStatus: 'PENDING_REVIEW',
+            hasLowConfidencePages: true,
+          });
+        }
+
+        return {
+          document: {
+            ...docWithWarning,
+            warning: extraction.warningMessage,
+            ocrResult: extraction.ocrResult,
+          },
+        };
+      }
+
+      // 2. Save Chunks
+      await prisma.documentChunk.deleteMany({ where: { documentId } });
+      if (extraction.chunks.length > 0) {
+        await prisma.documentChunk.createMany({
+          data: extraction.chunks.map((c) => ({
+            documentId,
+            chunkIndex: c.chunkIndex,
+            pageNumber: c.pageNumber,
+            content: c.content,
+          })),
+        });
+      }
+
+      if (jobId) {
+        JobQueueService.updateProgress(
+          jobId,
+          extraction.pageCount,
+          extraction.pageCount,
+          'Running AI legal intelligence analysis (clauses, summary, obligations)...'
+        );
+      }
+
+      // 3. Run AI / Rule Engine Extractions
+      const [summary, clauses, completeness, obligations] = await Promise.all([
+        AIAdapter.generateSummary(extraction.text, originalName),
+        AIAdapter.analyzeClauses(extraction.text),
+        AIAdapter.checkCompleteness(extraction.text, 'General Commercial Contract'),
+        AIAdapter.extractObligations(extraction.text),
+      ]);
+
+      // 4. Upsert Summary
+      await prisma.contractSummary.upsert({
+        where: { documentId },
+        update: {
+          contractType: summary.contractType,
+          parties: summary.parties,
+          purpose: summary.purpose,
+          effectiveDate: summary.effectiveDate,
+          endDate: summary.endDate,
+          paymentTerms: summary.paymentTerms,
+          responsibilities: summary.responsibilities,
+          terminationConditions: summary.terminationConditions,
+          confidentialityTerms: summary.confidentialityTerms,
+          liabilityTerms: summary.liabilityTerms,
+          renewalProvisions: summary.renewalProvisions,
+          importantDeadlines: summary.importantDeadlines,
+          missingInfo: summary.missingInfo,
+          rawSummary: summary.rawSummary,
+          analysisProvider: summary.analysisProvider,
+        },
+        create: {
+          documentId,
+          contractType: summary.contractType,
+          parties: summary.parties,
+          purpose: summary.purpose,
+          effectiveDate: summary.effectiveDate,
+          endDate: summary.endDate,
+          paymentTerms: summary.paymentTerms,
+          responsibilities: summary.responsibilities,
+          terminationConditions: summary.terminationConditions,
+          confidentialityTerms: summary.confidentialityTerms,
+          liabilityTerms: summary.liabilityTerms,
+          renewalProvisions: summary.renewalProvisions,
+          importantDeadlines: summary.importantDeadlines,
+          missingInfo: summary.missingInfo,
+          rawSummary: summary.rawSummary,
+          analysisProvider: summary.analysisProvider,
+        },
+      });
+
+      // 5. Replace Clause Findings
+      await prisma.clauseFinding.deleteMany({ where: { documentId } });
+      if (clauses.length > 0) {
+        await prisma.clauseFinding.createMany({
+          data: clauses.map((c) => ({
+            documentId,
+            category: c.category,
+            title: c.title,
+            excerpt: c.excerpt,
+            pageNumber: c.pageNumber || 1,
+            plainLanguageExplanation: c.plainLanguageExplanation,
+            riskLevel: c.riskLevel,
+            potentialConcern: c.potentialConcern,
+            reviewQuestion: c.reviewQuestion,
+            reviewStatus: 'PENDING',
+          })),
+        });
+      }
+
+      // 6. Replace Completeness Checks
+      await prisma.completenessCheck.deleteMany({ where: { documentId } });
+      if (completeness.length > 0) {
+        await prisma.completenessCheck.createMany({
+          data: completeness.map((comp) => ({
+            documentId,
+            contractCategory: 'Commercial Contract',
+            expectedSection: comp.expectedSection,
+            detectedTitle: comp.detectedTitle,
+            status: comp.status,
+            excerpt: comp.excerpt,
+            pageNumber: comp.pageNumber,
+            reason: comp.reason,
+            isReviewed: false,
+          })),
+        });
+      }
+
+      // 7. Replace Extracted Obligations
+      await prisma.extractedObligation.deleteMany({ where: { documentId } });
+      if (obligations.length > 0) {
+        await prisma.extractedObligation.createMany({
+          data: obligations.map((ob) => ({
+            documentId,
+            category: ob.category,
+            description: ob.description,
+            responsibleParty: ob.responsibleParty,
+            dueDateOrPeriod: ob.dueDateOrPeriod,
+            isCalendarDate: ob.isCalendarDate,
+            excerpt: ob.excerpt,
+            pageNumber: ob.pageNumber,
+            confidence: ob.confidence,
+            reviewStatus: 'UNREVIEWED',
+          })),
+        });
+      }
+
+      // 8. Update Document status to COMPLETED
+      const finalDoc = await prisma.document.update({
+        where: { id: documentId },
+        data: {
+          status: 'COMPLETED',
+          ocrStatus,
+          ocrMetadata: ocrMetaJson,
+          pageCount: extraction.pageCount,
+          extractedText: extraction.text,
+          errorMessage: extraction.warningMessage || null,
+        },
+        include: {
+          summary: true,
+          _count: {
+            select: {
+              clauses: true,
+              completenessChecks: true,
+              obligations: true,
+            },
+          },
+        },
+      });
+
+      if (jobId) {
+        JobQueueService.completeJob(jobId, {
+          documentId,
+          pageCount: extraction.pageCount,
+          ocrStatus,
+          hasLowConfidencePages: extraction.ocrResult.hasLowConfidencePages,
+        });
+      }
+
+      return {
+        document: {
+          ...finalDoc,
+          ocrResult: extraction.ocrResult,
+        },
+      };
+    } catch (err: any) {
+      console.error(`[DocumentController] Processing failed for doc ${documentId}:`, err);
+      await prisma.document.update({
+        where: { id: documentId },
+        data: {
+          status: 'FAILED',
+          errorMessage: err.message || 'Unknown processing error',
+        },
+      });
+      if (jobId) {
+        JobQueueService.failJob(jobId, err.message || 'Unknown processing error');
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * Upload and process a new PDF contract (supports immediate async 202 response or ?sync=true)
    */
   static async uploadDocument(req: Request, res: Response): Promise<void> {
     const file = req.file;
@@ -41,164 +290,49 @@ export class DocumentController {
         },
       });
 
-      // 2. Extract Text from PDF with page-by-page detection and local PaddleOCR for scanned pages
-      const extraction = await PdfService.extractText(file.path);
-      const ocrMetaJson = JSON.stringify(extraction.ocrResult);
-      const ocrStatus = extraction.ocrResult.hasLowConfidencePages
-        ? 'PENDING_REVIEW'
-        : extraction.ocrResult.scannedPagesCount > 0
-        ? 'OCR_COMPLETED'
-        : 'VERIFIED';
+      // 2. Initialize Background Job
+      const job = JobQueueService.createJob(createdDoc.id, userId);
 
-      // Check if scanned/empty and no text could be extracted (e.g. OCR credentials needed or unreadable image)
-      if (extraction.isScannedOrEmpty) {
-        const docWithWarning = await prisma.document.update({
-          where: { id: createdDoc.id },
-          data: {
-            status: 'COMPLETED',
-            ocrStatus: 'PENDING_REVIEW',
-            ocrMetadata: ocrMetaJson,
-            pageCount: extraction.pageCount,
-            extractedText: extraction.text,
-            errorMessage: extraction.warningMessage,
-          },
+      const isSync = req.query.sync === 'true';
+
+      if (!isSync) {
+        // Fast asynchronous response - background job executes without blocking HTTP client
+        setImmediate(async () => {
+          try {
+            await DocumentController.processDocumentAsync(
+              createdDoc.id,
+              file.path,
+              file.originalname,
+              job.id
+            );
+          } catch (bgErr) {
+            console.error('[DocumentController] Background upload processing error:', bgErr);
+          }
         });
 
-        res.status(201).json({
-          message: 'Document uploaded. Scanned / image-based pages detected.',
-          document: {
-            ...docWithWarning,
-            warning: extraction.warningMessage,
-            ocrResult: extraction.ocrResult,
-          },
+        res.status(202).json({
+          message: 'Document uploaded successfully. Background legal intelligence scan started.',
+          jobId: job.id,
+          documentId: createdDoc.id,
+          status: 'PROCESSING',
+          progress: job.progress,
+          document: createdDoc,
         });
         return;
       }
 
-      // 3. Save Chunks
-      if (extraction.chunks.length > 0) {
-        await prisma.documentChunk.createMany({
-          data: extraction.chunks.map((c) => ({
-            documentId: createdDoc.id,
-            chunkIndex: c.chunkIndex,
-            pageNumber: c.pageNumber,
-            content: c.content,
-          })),
-        });
-      }
-
-      // 4. Run AI / Rule Engine Extractions
-      const [summary, clauses, completeness, obligations] = await Promise.all([
-        AIAdapter.generateSummary(extraction.text, file.originalname),
-        AIAdapter.analyzeClauses(extraction.text),
-        AIAdapter.checkCompleteness(extraction.text, 'General Commercial Contract'),
-        AIAdapter.extractObligations(extraction.text),
-      ]);
-
-      // 5. Persist Summary
-      await prisma.contractSummary.create({
-        data: {
-          documentId: createdDoc.id,
-          contractType: summary.contractType,
-          parties: summary.parties,
-          purpose: summary.purpose,
-          effectiveDate: summary.effectiveDate,
-          endDate: summary.endDate,
-          paymentTerms: summary.paymentTerms,
-          responsibilities: summary.responsibilities,
-          terminationConditions: summary.terminationConditions,
-          confidentialityTerms: summary.confidentialityTerms,
-          liabilityTerms: summary.liabilityTerms,
-          renewalProvisions: summary.renewalProvisions,
-          importantDeadlines: summary.importantDeadlines,
-          missingInfo: summary.missingInfo,
-          rawSummary: summary.rawSummary,
-          analysisProvider: summary.analysisProvider,
-        },
-      });
-
-      // 6. Persist Clause Findings
-      if (clauses.length > 0) {
-        await prisma.clauseFinding.createMany({
-          data: clauses.map((c) => ({
-            documentId: createdDoc.id,
-            category: c.category,
-            title: c.title,
-            excerpt: c.excerpt,
-            pageNumber: c.pageNumber || 1,
-            plainLanguageExplanation: c.plainLanguageExplanation,
-            riskLevel: c.riskLevel,
-            potentialConcern: c.potentialConcern,
-            reviewQuestion: c.reviewQuestion,
-            reviewStatus: 'PENDING',
-          })),
-        });
-      }
-
-      // 7. Persist Completeness Checks
-      if (completeness.length > 0) {
-        await prisma.completenessCheck.createMany({
-          data: completeness.map((comp) => ({
-            documentId: createdDoc.id,
-            contractCategory: 'Commercial Contract',
-            expectedSection: comp.expectedSection,
-            detectedTitle: comp.detectedTitle,
-            status: comp.status,
-            excerpt: comp.excerpt,
-            pageNumber: comp.pageNumber,
-            reason: comp.reason,
-            isReviewed: false,
-          })),
-        });
-      }
-
-      // 8. Persist Extracted Obligations
-      if (obligations.length > 0) {
-        await prisma.extractedObligation.createMany({
-          data: obligations.map((ob) => ({
-            documentId: createdDoc.id,
-            category: ob.category,
-            description: ob.description,
-            responsibleParty: ob.responsibleParty,
-            dueDateOrPeriod: ob.dueDateOrPeriod,
-            isCalendarDate: ob.isCalendarDate,
-            excerpt: ob.excerpt,
-            pageNumber: ob.pageNumber,
-            confidence: ob.confidence,
-            reviewStatus: 'UNREVIEWED',
-          })),
-        });
-      }
-
-      // 9. Update Document status to COMPLETED (or PENDING_REVIEW if low confidence flags exist)
-      const finalDoc = await prisma.document.update({
-        where: { id: createdDoc.id },
-        data: {
-          status: 'COMPLETED',
-          ocrStatus,
-          ocrMetadata: ocrMetaJson,
-          pageCount: extraction.pageCount,
-          extractedText: extraction.text,
-          errorMessage: extraction.warningMessage || null,
-        },
-        include: {
-          summary: true,
-          _count: {
-            select: {
-              clauses: true,
-              completenessChecks: true,
-              obligations: true,
-            },
-          },
-        },
-      });
+      // Synchronous execution path (for scripts and synchronous tests)
+      const result = await DocumentController.processDocumentAsync(
+        createdDoc.id,
+        file.path,
+        file.originalname,
+        job.id
+      );
 
       res.status(201).json({
         message: 'Contract uploaded and analyzed successfully.',
-        document: {
-          ...finalDoc,
-          ocrResult: extraction.ocrResult,
-        },
+        document: result.document,
+        jobId: job.id,
       });
     } catch (err: any) {
       console.error('Upload processing error:', err);
@@ -214,6 +348,50 @@ export class DocumentController {
       res.status(500).json({
         error: `Document processing failed: ${err.message || 'Error parsing contract file'}`,
       });
+    }
+  }
+
+  /**
+   * Get Background Processing Job Status & Progress
+   */
+  static async getJobStatus(req: Request, res: Response): Promise<void> {
+    try {
+      const { jobId } = req.params;
+      const job = JobQueueService.getJob(jobId);
+
+      if (!job) {
+        res.status(404).json({ error: 'Job not found.' });
+        return;
+      }
+
+      let document = null;
+      if (job.status === 'COMPLETED' || job.status === 'PROCESSING') {
+        document = await prisma.document.findUnique({
+          where: { id: job.documentId },
+          include: {
+            summary: true,
+            _count: {
+              select: {
+                clauses: true,
+                completenessChecks: true,
+                obligations: true,
+              },
+            },
+          },
+        });
+      }
+
+      res.json({
+        jobId: job.id,
+        documentId: job.documentId,
+        status: job.status,
+        progress: job.progress,
+        error: job.error,
+        completedAt: job.completedAt,
+        document,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: 'Failed to retrieve job status.' });
     }
   }
 
@@ -915,11 +1093,12 @@ export class DocumentController {
   }
 
   /**
-   * Re-run local PaddleOCR extraction on a document
+   * Re-run local PaddleOCR extraction on a document (supports selective page re-processing and background jobs)
    */
   static async reOcrDocument(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+      const { pageNumbers, bypassCache } = req.body || {};
       const doc = await prisma.document.findUnique({ where: { id } });
 
       if (!doc) {
@@ -932,140 +1111,51 @@ export class DocumentController {
         return;
       }
 
-      const extraction = await PdfService.extractText(doc.filePath);
-      const ocrMetaJson = JSON.stringify(extraction.ocrResult);
-      const ocrStatus = extraction.ocrResult.hasLowConfidencePages
-        ? 'PENDING_REVIEW'
-        : extraction.ocrResult.scannedPagesCount > 0
-        ? 'OCR_COMPLETED'
-        : 'VERIFIED';
+      const isSync = req.query.sync === 'true';
+      const job = JobQueueService.createJob(doc.id, doc.userId, doc.pageCount);
 
-      // Update chunks
-      if (extraction.chunks.length > 0) {
-        await prisma.documentChunk.deleteMany({ where: { documentId: id } });
-        await prisma.documentChunk.createMany({
-          data: extraction.chunks.map((c) => ({
-            documentId: id,
-            chunkIndex: c.chunkIndex,
-            pageNumber: c.pageNumber,
-            content: c.content,
-          })),
-        });
-      }
+      const runOpts = {
+        forcePageNumbers: Array.isArray(pageNumbers) && pageNumbers.length > 0 ? pageNumbers : undefined,
+        bypassCache: bypassCache !== false,
+      };
 
-      // If text exists, re-run analysis
-      if (extraction.text && extraction.text.trim().length > 30) {
-        const [summary, clauses, completeness, obligations] = await Promise.all([
-          AIAdapter.generateSummary(extraction.text, doc.originalName),
-          AIAdapter.analyzeClauses(extraction.text),
-          AIAdapter.checkCompleteness(extraction.text, 'General Commercial Contract'),
-          AIAdapter.extractObligations(extraction.text),
-        ]);
-
-        await prisma.contractSummary.deleteMany({ where: { documentId: id } });
-        await prisma.contractSummary.create({
-          data: {
-            documentId: id,
-            contractType: summary.contractType,
-            parties: summary.parties,
-            purpose: summary.purpose,
-            effectiveDate: summary.effectiveDate,
-            endDate: summary.endDate,
-            paymentTerms: summary.paymentTerms,
-            responsibilities: summary.responsibilities,
-            terminationConditions: summary.terminationConditions,
-            confidentialityTerms: summary.confidentialityTerms,
-            liabilityTerms: summary.liabilityTerms,
-            renewalProvisions: summary.renewalProvisions,
-            importantDeadlines: summary.importantDeadlines,
-            missingInfo: summary.missingInfo,
-            rawSummary: summary.rawSummary,
-            analysisProvider: summary.analysisProvider,
-          },
+      if (!isSync) {
+        setImmediate(async () => {
+          try {
+            await DocumentController.processDocumentAsync(
+              doc.id,
+              doc.filePath,
+              doc.originalName,
+              job.id,
+              runOpts
+            );
+          } catch (e) {
+            console.error('[DocumentController] reOcrDocument background error:', e);
+          }
         });
 
-        await prisma.clauseFinding.deleteMany({ where: { documentId: id } });
-        if (clauses.length > 0) {
-          await prisma.clauseFinding.createMany({
-            data: clauses.map((c) => ({
-              documentId: id,
-              category: c.category,
-              title: c.title,
-              excerpt: c.excerpt,
-              pageNumber: c.pageNumber || 1,
-              plainLanguageExplanation: c.plainLanguageExplanation,
-              riskLevel: c.riskLevel,
-              potentialConcern: c.potentialConcern,
-              reviewQuestion: c.reviewQuestion,
-              reviewStatus: 'PENDING',
-            })),
-          });
-        }
-
-        await prisma.completenessCheck.deleteMany({ where: { documentId: id } });
-        if (completeness.length > 0) {
-          await prisma.completenessCheck.createMany({
-            data: completeness.map((comp) => ({
-              documentId: id,
-              contractCategory: 'Commercial Contract',
-              expectedSection: comp.expectedSection,
-              detectedTitle: comp.detectedTitle,
-              status: comp.status,
-              excerpt: comp.excerpt,
-              pageNumber: comp.pageNumber,
-              reason: comp.reason,
-              isReviewed: false,
-            })),
-          });
-        }
-
-        await prisma.extractedObligation.deleteMany({ where: { documentId: id } });
-        if (obligations.length > 0) {
-          await prisma.extractedObligation.createMany({
-            data: obligations.map((ob) => ({
-              documentId: id,
-              category: ob.category,
-              description: ob.description,
-              responsibleParty: ob.responsibleParty,
-              dueDateOrPeriod: ob.dueDateOrPeriod,
-              isCalendarDate: ob.isCalendarDate,
-              excerpt: ob.excerpt,
-              pageNumber: ob.pageNumber,
-              confidence: ob.confidence,
-              reviewStatus: 'UNREVIEWED',
-            })),
-          });
-        }
+        res.status(202).json({
+          message: 'Document re-OCR queued in background.',
+          jobId: job.id,
+          documentId: doc.id,
+          status: 'PROCESSING',
+          progress: job.progress,
+        });
+        return;
       }
 
-      const updated = await prisma.document.update({
-        where: { id },
-        data: {
-          status: 'COMPLETED',
-          ocrStatus,
-          ocrMetadata: ocrMetaJson,
-          pageCount: extraction.pageCount,
-          extractedText: extraction.text,
-          errorMessage: extraction.warningMessage || null,
-        },
-        include: {
-          summary: true,
-          _count: {
-            select: {
-              clauses: true,
-              completenessChecks: true,
-              obligations: true,
-            },
-          },
-        },
-      });
+      const result = await DocumentController.processDocumentAsync(
+        doc.id,
+        doc.filePath,
+        doc.originalName,
+        job.id,
+        runOpts
+      );
 
       res.json({
         message: 'Document re-scanned with local PaddleOCR successfully.',
-        document: {
-          ...updated,
-          ocrResult: extraction.ocrResult,
-        },
+        document: result.document,
+        jobId: job.id,
       });
     } catch (error: any) {
       console.error('reOcrDocument error:', error);

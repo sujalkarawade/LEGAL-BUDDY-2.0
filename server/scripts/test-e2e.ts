@@ -64,7 +64,7 @@ async function runTests() {
   const scannedForm = new FormData();
   const scannedBuffer = fs.readFileSync(path.join(samplesDir, 'sample_empty_scanned.pdf'));
   scannedForm.append('file', new File([scannedBuffer], 'sample_empty_scanned.pdf', { type: 'application/pdf' }));
-  const scannedUploadRes = await fetch(`${BASE_URL}/documents/upload`, {
+  const scannedUploadRes = await fetch(`${BASE_URL}/documents/upload?sync=true`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${sarahToken}` },
     body: scannedForm,
@@ -74,7 +74,7 @@ async function runTests() {
     console.log('   [DEBUG] Scanned Upload status:', scannedUploadRes.status, 'data:', scannedData);
   }
   assert(
-    scannedUploadRes.status === 201 && (scannedData.document?.warning || scannedData.document?.errorMessage || scannedData.message || '').includes('Scanned'),
+    scannedUploadRes.status === 201 && (scannedData.document?.warning || scannedData.document?.errorMessage || scannedData.message || '').toLowerCase().includes('scanned'),
     'Detect Scanned / Empty PDF and Provide OCR Warning',
     JSON.stringify(scannedData)
   );
@@ -83,7 +83,7 @@ async function runTests() {
   const ndaForm = new FormData();
   const ndaBuffer = fs.readFileSync(path.join(samplesDir, 'sample_nda.pdf'));
   ndaForm.append('file', new File([ndaBuffer], 'sample_nda.pdf', { type: 'application/pdf' }));
-  const ndaUploadRes = await fetch(`${BASE_URL}/documents/upload`, {
+  const ndaUploadRes = await fetch(`${BASE_URL}/documents/upload?sync=true`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${sarahToken}` },
     body: ndaForm,

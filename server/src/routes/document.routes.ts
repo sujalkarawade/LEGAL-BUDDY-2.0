@@ -8,6 +8,7 @@ const router = Router();
 // Document creation and listing
 router.post('/upload', authenticateToken, uploadMiddleware.single('file'), DocumentController.uploadDocument);
 router.get('/', authenticateToken, DocumentController.getDocuments);
+router.get('/jobs/:jobId', authenticateToken, DocumentController.getJobStatus);
 
 // Document specific routes (with ownership check)
 router.get('/:id', authenticateToken, requireDocumentOwnership, DocumentController.getDocumentById);

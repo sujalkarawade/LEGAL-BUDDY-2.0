@@ -82,16 +82,46 @@ export const UploadPage: React.FC = () => {
 
     try {
       setProcessingStage('Securely uploading PDF file to storage...');
-      await new Promise((r) => setTimeout(r, 400));
-
-      setProcessingStage('Auditing page streams & running local PaddleOCR on scanned pages (English & Marathi)...');
       const response = await ApiService.uploadDocument(selectedFile);
 
+      let doc = response.document;
+
+      // Handle async background job pipeline with live progress updates (e.g. 5/34 pages completed)
+      if (response.jobId && response.status === 'PROCESSING') {
+        const pollInterval = 600;
+        let jobDone = false;
+
+        while (!jobDone) {
+          await new Promise((r) => setTimeout(r, pollInterval));
+          try {
+            const jobStatus = await ApiService.getJobStatus(response.jobId);
+            if (jobStatus.progress) {
+              const p = jobStatus.progress;
+              const pageInfo = p.totalPages > 1 ? ` (${p.completedPages}/${p.totalPages} pages - ${p.percent}%)` : '';
+              setProcessingStage(`${p.currentStage}${pageInfo}`);
+            }
+
+            if (jobStatus.status === 'COMPLETED') {
+              jobDone = true;
+              if (jobStatus.document) {
+                doc = jobStatus.document;
+              }
+            } else if (jobStatus.status === 'FAILED') {
+              throw new Error(jobStatus.error || 'Background OCR processing failed.');
+            }
+          } catch (pollErr: any) {
+            if (pollErr.message && pollErr.message.includes('Background OCR processing failed')) {
+              throw pollErr;
+            }
+            // Transient network retry while polling
+          }
+        }
+      }
+
       setProcessingStage('Preserving English & Marathi page boundaries and structuring contract chunks...');
-      await new Promise((r) => setTimeout(r, 600));
+      await new Promise((r) => setTimeout(r, 400));
 
       // If document was scanned or user requested verification, navigate to OCR Preview
-      const doc = response.document;
       const isScannedOrFlagged =
         doc.ocrStatus === 'PENDING_REVIEW' ||
         doc.ocrStatus === 'OCR_COMPLETED' ||

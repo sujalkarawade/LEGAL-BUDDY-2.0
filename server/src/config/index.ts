@@ -42,7 +42,7 @@ export const OCR_PYTHON = process.env.OCR_PYTHON || 'python';
 export const OCR_LANG = process.env.OCR_LANG || 'devanagari';
 
 /** Render resolution (DPI) for scanned pages before OCR. Higher = more accurate but slower. */
-export const OCR_DPI = parseInt(process.env.OCR_DPI || '200', 10);
+export const OCR_DPI = parseInt(process.env.OCR_DPI || '150', 10);
 
 /** Safety cap on the number of scanned pages OCR'd per document (oversized PDFs). */
 export const OCR_MAX_PAGES = parseInt(process.env.OCR_MAX_PAGES || '300', 10);

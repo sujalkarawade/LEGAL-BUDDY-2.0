@@ -83,10 +83,30 @@ export class PdfService {
    * 4. Flags low-confidence extractions for user preview.
    * 5. Handles poor scans, empty pages, OCR failures, and oversized PDFs gracefully.
    */
-  static async extractText(filePath: string): Promise<PdfExtractionResult> {
+  static async extractText(
+    filePath: string,
+    onProgress?: (progress: {
+      completedPages: number;
+      totalPages: number;
+      stage: string;
+      scannedCount?: number;
+      selectableCount?: number;
+    }) => void,
+    options?: {
+      bypassCache?: boolean;
+      forcePageNumbers?: number[];
+      dpi?: number;
+    }
+  ): Promise<PdfExtractionResult> {
     if (!fs.existsSync(filePath)) {
       throw new Error(`File does not exist at path: ${filePath}`);
     }
+
+    onProgress?.({
+      completedPages: 0,
+      totalPages: 1,
+      stage: 'Validating PDF signatures and stream layout...',
+    });
 
     const dataBuffer = fs.readFileSync(filePath);
 
@@ -101,7 +121,7 @@ export class PdfService {
     let parsedTotalPages = 1;
 
     try {
-      const options = {
+      const parseOptions = {
         pagerender: (pageData: any) => {
           return pageData.getTextContent().then((textContent: any) => {
             let lastY: number | undefined;
@@ -124,7 +144,7 @@ export class PdfService {
         },
       };
 
-      const parsed = await pdfParse(dataBuffer, options);
+      const parsed = await pdfParse(dataBuffer, parseOptions);
       parsedTotalPages = parsed.numpages || (rawPageTexts.length > 0 ? rawPageTexts.length : 1);
     } catch (parseErr: any) {
       console.warn('[PdfService] pdf-parse pagerender warning/error:', parseErr?.message);
@@ -142,7 +162,9 @@ export class PdfService {
       const text = found ? found.text : '';
       perPageSelectableMap.set(p, text);
 
-      if (this.isSubstantiveText(text)) {
+      if (options?.forcePageNumbers && options.forcePageNumbers.includes(p)) {
+        scannedPageNumbers.push(p);
+      } else if (this.isSubstantiveText(text)) {
         selectablePageNumbers.push(p);
       } else {
         scannedPageNumbers.push(p);
@@ -154,11 +176,25 @@ export class PdfService {
       `Selectable: ${selectablePageNumbers.length} | Scanned/Image: ${scannedPageNumbers.length}`
     );
 
+    onProgress?.({
+      completedPages: selectablePageNumbers.length,
+      totalPages,
+      stage: `Page audit complete: ${selectablePageNumbers.length} digital selectable, ${scannedPageNumbers.length} scanned/image page(s)`,
+      scannedCount: scannedPageNumbers.length,
+      selectableCount: selectablePageNumbers.length,
+    });
+
     const isAllSelectable = scannedPageNumbers.length === 0;
     const isOcrConfigured = PaddleOcrService.isConfigured();
 
     // Case A: Entire document has selectable digital text -> No OCR needed
     if (isAllSelectable) {
+      onProgress?.({
+        completedPages: totalPages,
+        totalPages,
+        stage: 'All pages have selectable text. Skipped OCR entirely.',
+      });
+
       const pagesMeta: PageOcrMetadata[] = [];
       const globalLanguages = new Set<string>(['en']);
 
@@ -219,7 +255,18 @@ export class PdfService {
 
         const ocrResult = await PaddleOcrService.analyzeScannedPages(
           filePath,
-          scannedPageNumbers
+          scannedPageNumbers,
+          (ocrEvent) => {
+            const completedTotal = selectablePageNumbers.length + ocrEvent.completedPages;
+            onProgress?.({
+              completedPages: completedTotal,
+              totalPages,
+              stage: `Extracting scanned page ${ocrEvent.pageNumber} (${ocrEvent.completedPages}/${scannedPageNumbers.length} scanned) with PaddleOCR...`,
+              scannedCount: scannedPageNumbers.length,
+              selectableCount: selectablePageNumbers.length,
+            });
+          },
+          options
         );
 
         // Merge selectable (direct) and PaddleOCR results, preserving page order.

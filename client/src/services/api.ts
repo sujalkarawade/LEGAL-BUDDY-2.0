@@ -83,13 +83,41 @@ class ApiService {
   }
 
   // Documents
-  static async uploadDocument(file: File): Promise<{ document: DocumentRecord; message: string }> {
+  static async uploadDocument(
+    file: File,
+    sync: boolean = false
+  ): Promise<{
+    document: DocumentRecord;
+    message: string;
+    jobId?: string;
+    status?: string;
+    progress?: any;
+  }> {
     const formData = new FormData();
     formData.append('file', file);
-    return this.request('/documents/upload', {
+    return this.request(`/documents/upload${sync ? '?sync=true' : ''}`, {
       method: 'POST',
       body: formData,
     });
+  }
+
+  static async getJobStatus(jobId: string): Promise<{
+    jobId: string;
+    documentId: string;
+    status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+    progress: {
+      completedPages: number;
+      totalPages: number;
+      percent: number;
+      currentStage: string;
+      scannedPagesCount?: number;
+      selectablePagesCount?: number;
+    };
+    error?: string | null;
+    completedAt?: string;
+    document?: DocumentRecord;
+  }> {
+    return this.request(`/documents/jobs/${jobId}`);
   }
 
   static async getDocuments(): Promise<{ documents: DocumentRecord[] }> {
