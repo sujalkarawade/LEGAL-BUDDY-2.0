@@ -1,0 +1,197 @@
+{
+  "executedAt": "2026-10-19T13:04:56.377Z",
+  "mode": "keyword_fallback",
+  "data": "Synthetic text; Marathi cases do not execute OCR.",
+  "rows": [
+    {
+      "id": "explicit-payment",
+      "correctPassageRetrieved": true,
+      "correctPage": true,
+      "citationValidationPassed": true,
+      "generated": {
+        "answer": "Invoices are payable within thirty days",
+        "citations": [
+          {
+            "chunkId": "expected-0",
+            "excerpt": "Invoices are payable within thirty days",
+            "pageNumber": 2,
+            "documentName": "Synthetic contract",
+            "score": 0.01639344262295082,
+            "extractionMethod": "selectable",
+            "lowConfidence": false,
+            "verified": true
+          }
+        ],
+        "insufficientEvidence": false,
+        "isDocumentGrounded": true,
+        "provider": "openrouter",
+        "retrievalMode": "keyword_fallback"
+      },
+      "generatedAnswerAccuracy": "See generated answer for manual comparison to expectedEvidence; no automatic accuracy score",
+      "retrievalMs": 10.78,
+      "totalMs": 2683.69
+    },
+    {
+      "id": "long-document",
+      "correctPassageRetrieved": true,
+      "correctPage": true,
+      "citationValidationPassed": true,
+      "generated": {
+        "answer": "The retrieved evidence is insufficient to answer this question. Please inspect the original document or ask a more specific question.",
+        "citations": [],
+        "insufficientEvidence": true,
+        "isDocumentGrounded": false,
+        "provider": "openrouter",
+        "retrievalMode": "keyword_fallback"
+      },
+      "generatedAnswerAccuracy": "See generated answer for manual comparison to expectedEvidence; no automatic accuracy score",
+      "retrievalMs": 0.78,
+      "totalMs": 3949.62
+    },
+    {
+      "id": "clause-number",
+      "correctPassageRetrieved": true,
+      "correctPage": true,
+      "citationValidationPassed": true,
+      "generated": {
+        "answer": "The retrieved evidence is insufficient to answer this question. Please inspect the original document or ask a more specific question.",
+        "citations": [],
+        "insufficientEvidence": true,
+        "isDocumentGrounded": false,
+        "provider": "openrouter",
+        "retrievalMode": "keyword_fallback"
+      },
+      "generatedAnswerAccuracy": "See generated answer for manual comparison to expectedEvidence; no automatic accuracy score",
+      "retrievalMs": 0.58,
+      "totalMs": 3882.79
+    },
+    {
+      "id": "date-and-amount",
+      "correctPassageRetrieved": true,
+      "correctPage": true,
+      "citationValidationPassed": true,
+      "generated": {
+        "answer": "The effective date is 1 April 2026 and the annual fee is INR 240,000.",
+        "citations": [
+          {
+            "chunkId": "expected-0",
+            "excerpt": "effective 1 April 2026; annual fee INR 240,000",
+            "pageNumber": 1,
+            "documentName": "Synthetic contract",
+            "score": 0.01639344262295082,
+            "extractionMethod": "selectable",
+            "lowConfidence": false,
+            "verified": true
+          }
+        ],
+        "insufficientEvidence": false,
+        "isDocumentGrounded": true,
+        "provider": "openrouter",
+        "retrievalMode": "keyword_fallback"
+      },
+      "generatedAnswerAccuracy": "See generated answer for manual comparison to expectedEvidence; no automatic accuracy score",
+      "retrievalMs": 0.5,
+      "totalMs": 3859.48
+    },
+    {
+      "id": "absent-answer",
+      "correctPassageRetrieved": true,
+      "correctPage": true,
+      "citationValidationPassed": true,
+      "generated": {
+        "answer": "The retrieved evidence is insufficient to answer this question. This does not establish that the information is absent from the entire document.",
+        "citations": [],
+        "isDocumentGrounded": false,
+        "insufficientEvidence": true,
+        "provider": "evidence_fallback",
+        "retrievalMode": "keyword_fallback"
+      },
+      "generatedAnswerAccuracy": "See generated answer for manual comparison to expectedEvidence; no automatic accuracy score",
+      "retrievalMs": 0.52,
+      "totalMs": 0.87
+    },
+    {
+      "id": "conflicting-passages",
+      "correctPassageRetrieved": true,
+      "correctPage": true,
+      "citationValidationPassed": true,
+      "generated": {
+        "answer": "The contract contains conflicting terms: sixty days and thirty days written notice. The actual termination notice period is ambiguous due to these conflicting terms.",
+        "citations": [
+          {
+            "chunkId": "expected-0",
+            "excerpt": "sixty days written notice",
+            "pageNumber": 3,
+            "documentName": "Synthetic contract",
+            "score": 0.01639344262295082,
+            "extractionMethod": "selectable",
+            "lowConfidence": false,
+            "verified": true
+          },
+          {
+            "chunkId": "expected-1",
+            "excerpt": "thirty days written notice",
+            "pageNumber": 11,
+            "documentName": "Synthetic contract",
+            "score": 0.016129032258064516,
+            "extractionMethod": "selectable",
+            "lowConfidence": false,
+            "verified": true
+          }
+        ],
+        "insufficientEvidence": false,
+        "isDocumentGrounded": true,
+        "provider": "openrouter",
+        "retrievalMode": "keyword_fallback"
+      },
+      "generatedAnswerAccuracy": "See generated answer for manual comparison to expectedEvidence; no automatic accuracy score",
+      "retrievalMs": 1.01,
+      "totalMs": 5244.83
+    },
+    {
+      "id": "marathi-english-scan",
+      "correctPassageRetrieved": true,
+      "correctPage": true,
+      "citationValidationPassed": true,
+      "generated": {
+        "answer": "Some supporting text has uncertain OCR. Verify it against the original scan.\n\nदेय रक्कम INR 50,000 आहे.",
+        "citations": [
+          {
+            "chunkId": "expected-0",
+            "excerpt": "रक्कम INR 50,000 payable within 15 days",
+            "pageNumber": 2,
+            "documentName": "Synthetic contract",
+            "score": 0.01639344262295082,
+            "extractionMethod": "paddle_ocr",
+            "lowConfidence": true,
+            "verified": true
+          }
+        ],
+        "insufficientEvidence": false,
+        "isDocumentGrounded": true,
+        "provider": "openrouter",
+        "retrievalMode": "keyword_fallback"
+      },
+      "generatedAnswerAccuracy": "See generated answer for manual comparison to expectedEvidence; no automatic accuracy score",
+      "retrievalMs": 2.63,
+      "totalMs": 5362.32
+    },
+    {
+      "id": "low-quality-ocr",
+      "correctPassageRetrieved": true,
+      "correctPage": true,
+      "citationValidationPassed": true,
+      "generated": {
+        "answer": "The retrieved evidence is insufficient to answer this question. Please inspect the original document or ask a more specific question.",
+        "citations": [],
+        "insufficientEvidence": true,
+        "isDocumentGrounded": false,
+        "provider": "openrouter",
+        "retrievalMode": "keyword_fallback"
+      },
+      "generatedAnswerAccuracy": "See generated answer for manual comparison to expectedEvidence; no automatic accuracy score",
+      "retrievalMs": 0.61,
+      "totalMs": 3459.6
+    }
+  ]
+}

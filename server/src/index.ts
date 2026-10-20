@@ -1,4 +1,6 @@
 import express from 'express';
+import { errorHandler } from './middleware/error-handler.js';
+import prisma from './prisma/client.js';
 import cors from 'cors';
 import { PORT, CLIENT_URL } from './config/index.js';
 import authRoutes from './routes/auth.routes.js';
@@ -12,14 +14,7 @@ const app = express();
 // Middleware
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, or dev tools)
-      if (!origin || origin.includes('localhost') || origin.includes('127.0.0.1')) {
-        callback(null, true);
-      } else {
-        callback(null, true);
-      }
-    },
+    origin: CLIENT_URL,
     credentials: true,
   })
 );
@@ -44,17 +39,13 @@ app.use('/api', templateRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
 // Global Error Handler
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Unhandled server error:', err);
-  const status = err.status || 500;
-  const message = err.message || 'Internal Server Error';
-  res.status(status).json({
-    error: message,
-    timestamp: new Date().toISOString(),
-  });
-});
+app.use(errorHandler);
 
 // Start Server
+// Single-server worker recovery: persisted extraction remains available for a user retry.
+await prisma.document.updateMany({ where: { status: 'PROCESSING' }, data: {
+  status: 'FAILED', ragStatus: 'FAILED', errorMessage: 'Processing was interrupted by a server restart. Retry to resume from saved pages.',
+} });
 app.listen(PORT, () => {
   console.log(`=======================================================`);
   console.log(`⚖️  LEGAL BUDDY SERVER STARTED SUCCESSFULLY`);

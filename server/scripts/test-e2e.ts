@@ -1,16 +1,19 @@
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'node:url';
 
-const BASE_URL = 'http://localhost:5000/api';
+const BASE_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
 
-async function runTests() {
+export async function runTests() {
   console.log('🚀 Starting Legal Buddy E2E Automated Verification Test Suite...\n');
 
+  const checks: Array<{ name: string; passed: boolean }> = [];
   let passedTests = 0;
   let totalTests = 0;
 
   function assert(condition: boolean, testName: string, detail: string = '') {
     totalTests++;
+    checks.push({ name: testName, passed: Boolean(condition) });
     if (condition) {
       passedTests++;
       console.log(`  ✅ [PASS] ${testName}`);
@@ -58,7 +61,7 @@ async function runTests() {
     headers: { Authorization: `Bearer ${sarahToken}` },
     body: invalidForm,
   });
-  assert(invalidUploadRes.status === 400 || invalidUploadRes.status === 500, 'Reject Non-PDF Uploads with Validation Error');
+  assert(invalidUploadRes.status === 400, 'Reject Non-PDF Uploads with Validation Error');
 
   // Edge Case: Scanned / Empty PDF
   const scannedForm = new FormData();
@@ -74,8 +77,10 @@ async function runTests() {
     console.log('   [DEBUG] Scanned Upload status:', scannedUploadRes.status, 'data:', scannedData);
   }
   assert(
-    scannedUploadRes.status === 201 && (scannedData.document?.warning || scannedData.document?.errorMessage || scannedData.message || '').toLowerCase().includes('scanned'),
-    'Detect Scanned / Empty PDF and Provide OCR Warning',
+    scannedUploadRes.status === 201 && scannedData.document?.status === 'FAILED' &&
+      scannedData.document?.ocrStatus === 'PENDING_REVIEW' &&
+      (scannedData.document?.warning || scannedData.document?.errorMessage || '').toLowerCase().match(/ocr|scanned|unreadable/),
+    'Keep Unreadable Scanned PDF Out of Ready State and Flag for OCR Review',
     JSON.stringify(scannedData)
   );
 
@@ -183,8 +188,11 @@ async function runTests() {
   });
   const chatQ1Data: any = await chatQ1Res.json();
   assert(
-    chatQ1Res.status === 200 && chatQ1Data.citations.length > 0 && chatQ1Data.message.content.includes('Page 2'),
-    'Chat Answers Document Query with Source Page & Citation Excerpt'
+    chatQ1Res.status === 200 && chatQ1Data.citations.some((cite: any) =>
+      cite.verified === true && cite.pageNumber === 2 && cite.documentName === 'sample_nda.pdf' && cite.excerpt &&
+      ndaData.document.ocrResult.pages.some((page: any) => page.pageNumber === cite.pageNumber && page.text.includes(cite.excerpt))) &&
+      ['semantic_hybrid', 'keyword_fallback'].includes(chatQ1Data.retrievalMode),
+    'Chat Returns Exact Source Excerpt and Server-Derived Page Metadata'
   );
 
   // Question NOT present in document (Safeguard check)
@@ -198,8 +206,10 @@ async function runTests() {
   });
   const chatQ2Data: any = await chatQ2Res.json();
   assert(
-    chatQ2Data.message.content.toLowerCase().includes('not found') || chatQ2Data.message.content.toLowerCase().includes('does not contain'),
-    'Chat Accurately Rejects Out-of-Document Questions with "Not Found" Safeguard'
+    chatQ2Data.message.content.toLowerCase().includes('not found') ||
+      chatQ2Data.message.content.toLowerCase().includes('does not contain') ||
+      chatQ2Data.message.content.toLowerCase().includes('insufficient'),
+    'Chat Reports Insufficient Evidence for Unsupported Questions'
   );
 
   // TEST 8: Multi-User Security & Authorization Isolation
@@ -217,7 +227,7 @@ async function runTests() {
   const unauthorizedRes = await fetch(`${BASE_URL}/documents/${ndaDocId}/summary`, {
     headers: { Authorization: `Bearer ${alexToken}` },
   });
-  assert(unauthorizedRes.status === 403, 'Enforce User Isolation (User B cannot access User A contract - 403 Forbidden)');
+  assert(unauthorizedRes.status === 404, 'Enforce User Isolation (Other-user documents are hidden with 404)');
 
   // TEST 9: Legal Document Generator
   console.log('\n--- Phase 9: Legal Document Generator & DOCX Output ---');
@@ -291,12 +301,16 @@ async function runTests() {
     'Dashboard Metrics Reflect Real Persisted Database Records'
   );
 
+  fs.writeFileSync(process.env.TEST_RESULTS_PATH || 'evaluations/last-e2e-results.json', JSON.stringify({
+    executedAt: new Date().toISOString(), mode: process.env.TEST_PROVIDER_MODE || 'configured-server', passedTests, totalTests, checks,
+  }, null, 2));
+  if (passedTests !== totalTests) process.exitCode = 1;
   console.log(`\n=======================================================`);
   console.log(`🎉 TEST SUMMARY: ${passedTests} / ${totalTests} TESTS PASSED!`);
   console.log(`=======================================================\n`);
 }
 
-runTests().catch((e) => {
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await runTests().catch((e) => {
   console.error('Fatal error in test suite:', e);
   process.exit(1);
 });

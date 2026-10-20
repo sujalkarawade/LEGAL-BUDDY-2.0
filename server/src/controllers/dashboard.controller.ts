@@ -96,7 +96,7 @@ export class DashboardController {
         aiStatus,
       });
     } catch (error: any) {
-      console.error('Dashboard stats error:', error);
+      console.error('Dashboard stats retrieval failed.');
       res.status(500).json({ error: 'Failed to retrieve dashboard statistics.' });
     }
   }

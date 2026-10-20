@@ -5,7 +5,7 @@
 ![TypeScript](https://img.shields.io/badge/typescript-5.6-blue.svg)
 ![PostgreSQL](https://img.shields.io/badge/postgresql-17-blue.svg)
 ![TailwindCSS](https://img.shields.io/badge/tailwindcss-3.4-indigo.svg)
-![Status](https://img.shields.io/badge/MVP-Fully%20Operational-emerald.svg)
+**RAG setup, migrations, behavior and measured limitations:** [RAG implementation guide](RAG.md).
 
 **Legal Buddy** is an enterprise-grade legal-tech SaaS platform designed to assist legal counsels, procurement teams, and corporate executives in reviewing, interpreting, and generating commercial agreements. Built with a dark **Midnight Glass** design system, the platform features page-level grounded contract parsing, risk-rated clause identification, document-grounded question answering (RAG), contract completeness checking, obligation tracking, and structured legal draft generation.
 
@@ -35,8 +35,8 @@
 ### 4. 💬 Document-Grounded Legal Buddy Chatbot (RAG)
 - Conversational contract assistant connected strictly to the active agreement.
 - Retrieval-augmented generation querying extracted per-page chunks.
-- Interactive **Citation Drawer** displaying exact verbatim quotes, page numbers, and relevance scores.
-- Strict legal safeguard: If an inquiry cannot be answered from the document, the assistant explicitly states that the clause was not found rather than hallucinating.
+- Interactive **Citation Drawer** displaying verified source excerpts, extraction page numbers, OCR warnings and authenticated PDF links.
+- Insufficient retrieved evidence is reported explicitly. Retrieval alone does not prove a provision is absent from the entire contract.
 
 ### 5. ✅ Contract Completeness Checker
 - Comprehensive audit of operative clauses against standard commercial contracting norms.
@@ -75,7 +75,7 @@
 | **Backend** | Node.js (v22), Express, TypeScript (`tsx`), Multer, `docx` |
 | **Database** | PostgreSQL 17 via Prisma ORM |
 | **Document Engine** | `pdf-parse`, `pdf-lib` |
-| **AI / NLP** | Dual-Engine Adapter: Google Gemini 1.5 / OpenAI GPT-4o with deterministic legal NLP rule engine fallback |
+| **AI / NLP** | Dual-Engine Adapter: Configurable Gemini / Groq / OpenRouter with deterministic legal NLP rule engine fallback |
 
 ---
 
@@ -162,8 +162,8 @@ LEGAL BUDDY 2.0/
    ```env
    PORT=5000
    NODE_ENV=development
-   DATABASE_URL="postgresql://postgres:postgres123@localhost:5432/legal_buddy?schema=public"
-   JWT_SECRET="legalbuddy_super_secure_jwt_secret_dev_key_2026_xyz"
+   DATABASE_URL="postgresql://your_user:your_password@localhost:5432/legal_buddy?schema=public"
+   JWT_SECRET="replace-with-a-long-random-secret"
    JWT_EXPIRES_IN="7d"
 
    # AI Provider Configuration (Groq Llama 3.3 70B recommended)
@@ -181,12 +181,15 @@ LEGAL BUDDY 2.0/
    ```bash
    # Apply Prisma schema to PostgreSQL
    cd server
-   npx prisma db push
+   npm run prisma:generate
+   npm run prisma:migrate
 
    # Run seed script
    npm run seed
    cd ..
    ```
+
+   Existing databases created with `db push` must follow the baseline instructions in [RAG.md](RAG.md#setup-and-migrations) before running migrations. Do not reset an existing database.
 
 5. **Generate Sample Test Contracts** *(Optional but recommended)*:
    ```bash
@@ -236,39 +239,23 @@ Legal Buddy features a flexible AI Adapter supporting **Google Gemini**, **OpenA
 3. **OpenAI**:
    - Set `OPENAI_API_KEY="your-openai-key"` in `server/.env`.
 
----
+### Retrieval setup
 
-## 🧪 Automated End-to-End Verification
+See [RAG.md](RAG.md) for the existing architecture, shared ingestion workflow, model/version handling, PostgreSQL vector storage, migrations, retry behavior, and evaluation commands. Gemini embeddings require `GEMINI_API_KEY`. Without that key, the application explicitly uses keyword retrieval.
 
-The repository includes a 22-step automated test suite covering all critical workflows:
+## Automated verification
 
-```bash
-cd server
-npx tsx scripts/test-e2e.ts
+The RAG suites test citation verification, embedding API contracts, authorization with a real database, processing failures and retries. The OCR suite exercises digital and image-only Marathi-English sample PDFs. Live sample answers and timings are recorded separately from deterministic tests. See [actual results and limitations](server/evaluations/RESULTS.md).
+
+```powershell
+npm run test:rag --prefix server
+npm run test:rag:integration --prefix server
+npm run test:api --prefix server
+npm run eval:rag --prefix server
+npm run test:ocr --prefix server
 ```
 
-### Verified Test Cases:
-- [x] Test User Authentication & JWT generation
-- [x] Rejection of invalid credentials with 401
-- [x] User profile retrieval (`/api/auth/me`)
-- [x] Non-PDF upload rejection with validation errors
-- [x] Detection of scanned/empty PDFs with OCR alerts
-- [x] Upload & multi-page text extraction of a 2-page Mutual NDA
-- [x] Summary fact extraction (parties, dates, purpose)
-- [x] Clause classification and risk assignment
-- [x] Real excerpt correlation with source text
-- [x] Updating clause review status to APPROVED
-- [x] Completeness checklist evaluation (Found, Needs Review, Not Found)
-- [x] Toggling completeness item review status
-- [x] Extracting contract deadlines and performance obligations
-- [x] Grounded chat answers with page numbers and citation excerpts
-- [x] Chat rejection of out-of-document inquiries with "Not Found" safeguard
-- [x] Multi-user data isolation (User B receives 403 Forbidden on User A's contract)
-- [x] Fetching legal template gallery
-- [x] Validating required fields in document generator wizard
-- [x] Generating structured draft document from template
-- [x] Downloading valid Microsoft Word `.docx` file
-- [x] Dashboard metrics reflecting real persisted records
+The full application smoke script is `server/scripts/test-e2e.ts`; it requires the running server and development seed users. `npm run test:api --prefix server` runs those same checks with a controlled answer provider and blocks external requests. See the [stabilization audit](server/evaluations/AUDIT.md) for current results and security limitations.
 
 ---
 
@@ -314,13 +301,13 @@ npx tsx scripts/test-e2e.ts
 | Module | Feature | Status | Notes |
 | :--- | :--- | :--- | :--- |
 | **Auth** | User Registration & Login | **Implemented** | Bcrypt hashing, JWT tokens, test seed |
-| **Auth** | Multi-User Isolation | **Implemented** | Strict ownership checks (403 forbidden) |
+| **Auth** | Multi-User Isolation | **Implemented** | Ownership and nested-resource checks (other-user documents return 404) |
 | **Auth** | Lawyer Portal Placeholder | **Implemented** | Professional coming-soon preview (`/lawyer-login`) |
 | **Ingestion** | PDF Text Extraction | **Implemented** | Page boundaries preserved (`---PAGE_X---`) |
 | **Ingestion** | Scanned / Empty PDF Detection | **Implemented** | Detects non-text PDFs with OCR notice |
 | **Analysis** | AI Executive Summary | **Implemented** | Facts vs "Not found in document" separation |
 | **Analysis** | Clause Risk Identification | **Implemented** | 10 clause categories, risk levels, human questions |
-| **Chatbot** | Document-Grounded Chatbot | **Implemented** | RAG retrieval, page citations, "not found" safeguard |
+| **Chatbot** | Document-Grounded Chatbot | **Implemented** | Semantic + exact-term retrieval when configured; owner-scoped chunks and metadata-backed citations |
 | **Checker** | Completeness Checker | **Implemented** | Checklist matching, reviewer check-off toggle |
 | **Extractor**| Dates & Obligations | **Implemented** | Calendar dates vs notice periods, party tags |
 | **Generator**| Legal Document Generator | **Implemented** | Form wizard, validation, editable view, DOCX export |
@@ -333,6 +320,6 @@ npx tsx scripts/test-e2e.ts
 
 ## ⚠️ Known Limitations & Assumptions
 
-1. **Scanned PDF OCR**: The baseline MVP includes detection of image-only / scanned PDFs and alerts the user that OCR is required. Full Tesseract/Vision OCR is scheduled for a future pipeline phase.
-2. **Deterministic Fallback**: In the absence of a `GEMINI_API_KEY` or `OPENAI_API_KEY`, the application operates in Heuristic Legal Engine mode. It reliably extracts operative clauses, dates, and answers keyword-matched questions, clearly indicating the active engine in the UI.
+1. **Scanned PDF OCR**: PaddleOCR runs locally for scanned pages and flags low-confidence output for review. Unreadable or flagged OCR should be verified in the OCR preview before relying on its text.
+2. **Deterministic Fallback**: In the absence of a `GEMINI_API_KEY` or `OPENAI_API_KEY`, the application operates in Heuristic Legal Engine mode. Existing analysis features retain heuristic fallback. Chat requires verified evidence and abstains when a supported explanation cannot be generated.
 3. **Legal Disclaimer**: Legal Buddy is an automated contract intelligence and analysis tool. It does not provide legal advice and does not substitute for qualified attorney counsel.

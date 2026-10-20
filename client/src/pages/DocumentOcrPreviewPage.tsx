@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ScanText,
   AlertTriangle,
@@ -24,6 +24,7 @@ import { DocumentNavHeader } from '../components/document/DocumentNavHeader.js';
 export const DocumentOcrPreviewPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [document, setDocument] = useState<DocumentRecord | null>(null);
   const [ocrData, setOcrData] = useState<DocumentOcrResult | null>(null);
@@ -47,6 +48,8 @@ export const DocumentOcrPreviewPage: React.FC = () => {
       ]);
       setDocument(docRes.document);
       setOcrData(ocrRes.ocrMetadata);
+      const pageIndex = ocrRes.ocrMetadata?.pages.findIndex(p => p.pageNumber === Number(searchParams.get('page')));
+      if (pageIndex !== undefined && pageIndex >= 0) setSelectedPageIndex(pageIndex);
 
       // Initialize edited pages map
       const initialMap: Record<number, string> = {};
@@ -92,6 +95,17 @@ export const DocumentOcrPreviewPage: React.FC = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const waitForJob = async (jobId: string) => {
+    for (let attempt = 0; attempt < 1800; attempt++) {
+      const job = await ApiService.getJobStatus(jobId);
+      setSuccessMessage(job.progress?.currentStage || 'Processing document...');
+      if (job.status === 'FAILED') throw new Error(job.error || 'Processing failed. Review pages and retry.');
+      if (job.status === 'COMPLETED') return job;
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    throw new Error('Processing continues in the background. Return later to check the document.');
+  };
+
   const handleVerifyAndAnalyze = async () => {
     if (!id || !ocrData) return;
     setIsSaving(true);
@@ -105,8 +119,9 @@ export const DocumentOcrPreviewPage: React.FC = () => {
       }));
 
       const res = await ApiService.verifyOcrAndAnalyze(id, pagesPayload);
-      setSuccessMessage('Text verified successfully! AI analysis pipeline completed.');
-      setDocument(res.document);
+      await waitForJob(res.jobId);
+      setSuccessMessage('Text verified and analysis completed.');
+      await fetchOcrData();
 
       // Briefly show success before navigating to summary
       setTimeout(() => {
@@ -118,7 +133,7 @@ export const DocumentOcrPreviewPage: React.FC = () => {
     }
   };
 
-  const handleReOcr = async () => {
+  const handleReOcr = async (onlyCurrentPage = false) => {
     if (!id) return;
     if (!confirm('Re-run local PaddleOCR on this contract? Existing extractions will be refreshed.')) {
       return;
@@ -127,7 +142,8 @@ export const DocumentOcrPreviewPage: React.FC = () => {
     setIsReScanning(true);
     setError(null);
     try {
-      await ApiService.reOcrDocument(id);
+      const result = await ApiService.reOcrDocument(id, onlyCurrentPage && ocrData ? [ocrData.pages[selectedPageIndex].pageNumber] : undefined);
+      await waitForJob(result.jobId);
       await fetchOcrData();
       setSuccessMessage('PaddleOCR re-scan completed successfully.');
       setTimeout(() => setSuccessMessage(null), 3000);
@@ -153,6 +169,11 @@ export const DocumentOcrPreviewPage: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-6 animate-fadeUp">
       <DocumentNavHeader document={document} />
+      <div className="flex items-center gap-3 text-sm">
+        <span>Document processing: {document?.ragStatus || 'Not indexed'}</span>
+        <button className="btn btn-sm" disabled={isReScanning || isSaving || !ocrData?.pages.length}
+          onClick={() => handleReOcr(true)}>Retry selected page</button>
+      </div>
 
       {/* OCR Intelligence Overview Banner */}
       <div className="border-[3px] border-[#0a0a0a] bg-white p-6 shadow-[6px_6px_0_#0a0a0a]">
@@ -171,7 +192,7 @@ export const DocumentOcrPreviewPage: React.FC = () => {
 
           <div className="flex items-center gap-3">
             <button
-              onClick={handleReOcr}
+              onClick={() => handleReOcr()}
               disabled={isReScanning || isSaving}
               className="btn btn-sm btn-secondary flex items-center gap-1.5"
               title="Re-run local PaddleOCR"

@@ -1,7 +1,7 @@
 export interface PageOcrMetadata {
   pageNumber: number;
   isScanned: boolean;
-  extractionType: 'selectable' | 'paddle_ocr' | 'fallback' | 'failed';
+  extractionType: 'selectable' | 'paddle_ocr' | 'fallback' | 'failed' | 'verified_user';
   text: string;
   wordCount: number;
   confidence: number; // 0.0 to 1.0 (1.0 for clean selectable text)

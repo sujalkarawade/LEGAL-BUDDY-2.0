@@ -35,6 +35,8 @@ model Document {
   pageCount          Int                  @default(0)
   status             String               @default("UPLOADED") // UPLOADED, PROCESSING, COMPLETED, FAILED
   errorMessage       String?
+  ragStatus          String               @default("UPLOADED") // EXTRACTING, INDEXING, READY, KEYWORD_READY, REVIEW_REQUIRED, FAILED
+  contentHash        String?
   extractedText      String?              @db.Text
   analysisMode       String               @default("auto") // "llm" or "heuristic"
   ocrMetadata        String?              @db.Text // JSON string of per-page OCR analysis
@@ -54,13 +56,17 @@ model Document {
 }
 
 model DocumentChunk {
-  id         String   @id @default(uuid())
-  documentId String
-  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  chunkIndex Int
-  pageNumber Int
-  content    String   @db.Text
-  createdAt  DateTime @default(now())
+  id                String   @id @default(uuid())
+  documentId        String
+  document          Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  chunkIndex        Int
+  pageNumber        Int
+  content           String   @db.Text
+  extractionMethod  String   @default("selectable")
+  clauseHeading     String?
+  embedding         String?  @db.Text // JSON float array; model is recorded separately
+  embeddingModel    String?
+  createdAt         DateTime @default(now())
 
   @@index([documentId])
   @@map("document_chunks")

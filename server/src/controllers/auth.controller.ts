@@ -69,7 +69,7 @@ export class AuthController {
         token,
       });
     } catch (error: any) {
-      console.error('Registration error:', error);
+      console.error('Registration failed.');
       res.status(500).json({ error: 'Server error during registration.' });
     }
   }
@@ -117,7 +117,7 @@ export class AuthController {
         token,
       });
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('Login failed.');
       res.status(500).json({ error: 'Server error during login.' });
     }
   }

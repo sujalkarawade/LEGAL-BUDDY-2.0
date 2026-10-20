@@ -76,7 +76,7 @@ export class OcrCacheService {
         return parsed;
       }
     } catch (err: any) {
-      console.warn(`[OcrCacheService] Failed to read corrupted cache ${filePath}:`, err?.message);
+      console.warn('[OcrCacheService] Invalid OCR cache; the affected pages will be reprocessed.');
       try {
         fs.unlinkSync(filePath);
       } catch (_) {}
@@ -93,7 +93,7 @@ export class OcrCacheService {
     try {
       fs.writeFileSync(filePath, JSON.stringify(data), 'utf-8');
     } catch (err: any) {
-      console.warn(`[OcrCacheService] Failed to write cache ${filePath}:`, err?.message);
+      console.warn('[OcrCacheService] Could not save OCR cache.');
     }
   }
 

@@ -85,7 +85,7 @@ export class JobQueueService {
     if (!job) return;
 
     const safeTotal = Math.max(totalPages, completedPages, 1);
-    const percent = Math.min(100, Math.round((completedPages / safeTotal) * 100));
+    const percent = Math.min(95, Math.round((completedPages / safeTotal) * 75) + (/embedding|chunks/i.test(stage) ? 10 : /analysis/i.test(stage) ? 20 : 0));
 
     job.progress = {
       completedPages,

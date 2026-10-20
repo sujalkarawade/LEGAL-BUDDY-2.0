@@ -65,8 +65,13 @@ async function runRegressionSuite() {
   const t_mix2 = Date.now();
   const mixed2 = await PdfService.extractText(MIXED);
   const mix2_ms = Date.now() - t_mix2;
-  console.log(`  Second run (cache hit): ${mix2_ms}ms.`);
-  assert(mix2_ms < 200, `Cached OCR lookup took ${mix2_ms}ms (< 200ms) - virtually instant!`);
+  console.log(`  Second run (reuse readable pages, retry blank page): ${mix2_ms}ms.`);
+  // A blank page is deliberately retried, so this is not a pure cache lookup.
+  // Verify cache behavior directly instead of asserting a machine-dependent time budget.
+  const readablePages = mixed1.ocrResult.pages.filter(p => p.text.trim()).map(p => p.pageNumber);
+  const cachedReadable = await PaddleOcrService.analyzeScannedPages(MIXED, readablePages);
+  assert(readablePages.length > 0 && cachedReadable.fromCache === true && cachedReadable.pages.size === readablePages.length,
+    'All readable pages are served from cache without OCR.');
   assert(mixed2.text === mixed1.text, 'Cached text matches freshly extracted text exactly.');
 
   // Req 7: Background Job Pipeline & Progress Events
@@ -129,10 +134,13 @@ async function runRegressionSuite() {
   const selectiveResult = await PdfService.extractText(
     MIXED,
     undefined,
-    { forcePageNumbers: [2], bypassCache: true }
+    { forcePageNumbers: [2], bypassCache: true, preservedPages: mixedAsync.ocrResult.pages.filter(p => p.pageNumber !== 2) }
   );
   assert(selectiveResult.ocrResult.pages.length === 3, 'Selective reprocessing maintained total page count.');
   assert(selectiveResult.ocrResult.pages[1].pageNumber === 2, 'Target page 2 was reprocessed.');
+  assert(mixedAsync.ocrResult.pages.filter(p => p.pageNumber !== 2).every(p =>
+    selectiveResult.ocrResult.pages.find(next => next.pageNumber === p.pageNumber)?.text === p.text),
+    'Selective processing preserves every untargeted page.');
 
   // Req 10: 34-Page Document Performance Verification
   console.log('\n--- Requirement 10: 34-Page PDF Performance Verification ---');

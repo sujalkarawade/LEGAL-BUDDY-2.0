@@ -119,7 +119,7 @@ export class TemplateController {
         generatedDocument: savedDoc,
       });
     } catch (error: any) {
-      console.error('Document generation error:', error);
+      console.error('Document generation failed.');
       res.status(500).json({ error: 'Failed to generate draft document.' });
     }
   }

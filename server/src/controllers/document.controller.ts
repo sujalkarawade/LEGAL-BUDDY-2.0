@@ -1,12 +1,52 @@
 import { Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
+import { createHash } from 'node:crypto';
 import prisma from '../prisma/client.js';
-import { PdfService } from '../services/pdf-service.js';
+import { OcrCacheService } from '../services/ocr/ocr-cache.service.js';
+import { z } from 'zod';
+import { PdfService, type PdfExtractionResult } from '../services/pdf-service.js';
 import { AIAdapter } from '../services/ai/ai-adapter.js';
 import { PaddleOcrService } from '../services/ocr/paddle-ocr.service.js';
 import { PageOcrMetadata } from '../services/ocr/ocr.types.js';
 import { JobQueueService } from '../services/job-queue.service.js';
+import { authorizedChunkFilter, RagService } from '../services/rag.service.js';
+import { isResourceOwner } from '../services/document-access.service.js';
+
+const processingError = 'Processing failed. Review extraction and embedding configuration, then retry.';
+const textHash = (text: string) => createHash('sha256').update(text).digest('hex');
+
+async function persistIndexedChunks(documentId: string, chunks: Awaited<ReturnType<typeof PdfService.chunkPages>>): Promise<void> {
+  const existing = await prisma.documentChunk.findMany({ where: { documentId }, orderBy: { chunkIndex: 'asc' } });
+  const unchanged = existing.length === chunks.length && chunks.every((chunk, index) => {
+    const stored = existing[index];
+    return stored?.chunkIndex === chunk.chunkIndex && stored.pageNumber === chunk.pageNumber &&
+      stored.content === chunk.content && stored.extractionMethod === chunk.extractionMethod &&
+      stored.clauseHeading === (chunk.clauseHeading || null);
+  });
+  const embeddingsCurrent = !RagService.embeddingEnabled || existing.every((chunk) =>
+    Boolean(RagService.validVector(chunk.embedding) && chunk.embeddingModel === RagService.embeddingModel));
+  if (unchanged && embeddingsCurrent) return;
+
+  if (!unchanged) await prisma.chatMessage.updateMany({ where: { conversation: { documentId } }, data: { sourceCitations: null } });
+  const retainedIds: string[] = [];
+  for (const chunk of chunks) {
+    const cached = existing.find(stored => stored.content === chunk.content && stored.pageNumber === chunk.pageNumber &&
+      stored.embeddingModel === RagService.embeddingModel && RagService.validVector(stored.embedding));
+    const vector = cached ? { embedding: cached.embedding, embeddingModel: cached.embeddingModel }
+      : (await RagService.embedChunks([chunk]))[0];
+    const data = { documentId, ...chunk, clauseHeading: chunk.clauseHeading || null, ...vector };
+    const previous = existing.find(stored => stored.chunkIndex === chunk.chunkIndex);
+    const stored = previous ? await prisma.documentChunk.update({ where: { id: previous.id }, data })
+      : await prisma.documentChunk.create({ data });
+    retainedIds.push(stored.id);
+  }
+
+  await prisma.$transaction([
+    prisma.documentChunk.deleteMany({ where: { documentId, id: { notIn: retainedIds } } }),
+
+  ]);
+}
 
 export class DocumentController {
   /**
@@ -17,15 +57,25 @@ export class DocumentController {
     filePath: string,
     originalName: string,
     jobId?: string,
-    options?: { forcePageNumbers?: number[]; bypassCache?: boolean }
+    options?: { forcePageNumbers?: number[]; bypassCache?: boolean; preservedPages?: PageOcrMetadata[]; extraction?: PdfExtractionResult; previouslyCompleted?: boolean }
   ): Promise<any> {
     try {
+      const previous = await prisma.document.findUniqueOrThrow({ where: { id: documentId }, include: { summary: { select: { id: true } } } });
+      const previousMetadata = previous.ocrMetadata ? JSON.parse(previous.ocrMetadata) : {};
+      const previousAnalysisHash: string | undefined = previousMetadata.analysisTextHash ||
+        (previous.summary && (previous.status === 'COMPLETED' || options?.previouslyCompleted) && previous.extractedText
+          ? textHash(previous.extractedText) : undefined);
+      // Invalidate confirmed sources before extraction, including attempts that fail before indexing.
+      await prisma.$transaction([
+        prisma.document.update({ where: { id: documentId }, data: { status: 'PROCESSING', ragStatus: 'EXTRACTING', errorMessage: null } }),
+        prisma.chatMessage.updateMany({ where: { conversation: { documentId } }, data: { sourceCitations: null } }),
+      ]);
       if (jobId) {
         JobQueueService.updateProgress(jobId, 0, 1, 'Auditing document pages for selectable text and scans...');
       }
 
       // 1. Extract text with progress streaming
-      const extraction = await PdfService.extractText(
+      const extraction = options?.extraction || await PdfService.extractText(
         filePath,
         (p) => {
           if (jobId) {
@@ -38,34 +88,40 @@ export class DocumentController {
         options
       );
 
-      const ocrMetaJson = JSON.stringify(extraction.ocrResult);
+      // Persist extraction before any external embedding/analysis call so retries reuse successful pages.
+      const contentHash = OcrCacheService.computeDocHash(filePath);
+      await prisma.document.update({ where: { id: documentId }, data: {
+        ocrMetadata: JSON.stringify({ ...extraction.ocrResult, analysisTextHash: previousAnalysisHash }), pageCount: extraction.pageCount,
+        extractedText: extraction.text, contentHash,
+      } });
+      const incompletePages = extraction.ocrResult.pages.filter(p =>
+        p.extractionType === 'failed' || (!p.text.trim() && p.extractionType !== 'verified_user'));
+      const ocrMetaJson = JSON.stringify({ ...extraction.ocrResult, analysisTextHash: previousAnalysisHash });
       const ocrStatus = extraction.ocrResult.hasLowConfidencePages
         ? 'PENDING_REVIEW'
+        : extraction.ocrResult.pages.every(p => p.extractionType === 'selectable' || p.extractionType === 'verified_user')
+        ? 'VERIFIED'
         : extraction.ocrResult.scannedPagesCount > 0
         ? 'OCR_COMPLETED'
         : 'VERIFIED';
 
       // If document is empty / unreadable
-      if (extraction.isScannedOrEmpty) {
+      if (extraction.isScannedOrEmpty || extraction.chunks.length === 0 || incompletePages.length > 0) {
         const docWithWarning = await prisma.document.update({
           where: { id: documentId },
           data: {
-            status: 'COMPLETED',
+            status: 'FAILED',
+            ragStatus: 'REVIEW_REQUIRED',
             ocrStatus: 'PENDING_REVIEW',
             ocrMetadata: ocrMetaJson,
             pageCount: extraction.pageCount,
             extractedText: extraction.text,
-            errorMessage: extraction.warningMessage,
+            errorMessage: incompletePages.length ? `Pages ${incompletePages.map(p => p.pageNumber).join(', ')} need OCR retry or manual verification.` : 'No usable text was extracted; review OCR before using document chat.',
           },
         });
 
         if (jobId) {
-          JobQueueService.completeJob(jobId, {
-            documentId,
-            pageCount: extraction.pageCount,
-            ocrStatus: 'PENDING_REVIEW',
-            hasLowConfidencePages: true,
-          });
+          JobQueueService.failJob(jobId, docWithWarning.errorMessage!);
         }
 
         return {
@@ -77,18 +133,12 @@ export class DocumentController {
         };
       }
 
-      // 2. Save Chunks
-      await prisma.documentChunk.deleteMany({ where: { documentId } });
-      if (extraction.chunks.length > 0) {
-        await prisma.documentChunk.createMany({
-          data: extraction.chunks.map((c) => ({
-            documentId,
-            chunkIndex: c.chunkIndex,
-            pageNumber: c.pageNumber,
-            content: c.content,
-          })),
-        });
+      // 2. Index page-aware chunks; unchanged content and model vectors are reused.
+      if (jobId) {
+        JobQueueService.updateProgress(jobId, extraction.pageCount, extraction.pageCount, 'Creating overlapping page-aware chunks and generating embeddings...');
       }
+      await prisma.document.update({ where: { id: documentId }, data: { ragStatus: 'INDEXING' } });
+      await persistIndexedChunks(documentId, extraction.chunks);
 
       if (jobId) {
         JobQueueService.updateProgress(
@@ -99,107 +149,119 @@ export class DocumentController {
         );
       }
 
-      // 3. Run AI / Rule Engine Extractions
-      const [summary, clauses, completeness, obligations] = await Promise.all([
-        AIAdapter.generateSummary(extraction.text, originalName),
-        AIAdapter.analyzeClauses(extraction.text),
-        AIAdapter.checkCompleteness(extraction.text, 'General Commercial Contract'),
-        AIAdapter.extractObligations(extraction.text),
-      ]);
+      // Reindexing unchanged text must not reset counsel's existing review decisions.
+      const analysisHash = textHash(extraction.text);
+      const reuseAnalysis = Boolean(previous.summary && previousAnalysisHash === analysisHash);
+      if (!reuseAnalysis) {
+        // 3. Run AI / Rule Engine Extractions
+        const [summary, clauses, completeness, obligations] = await Promise.all([
+          AIAdapter.generateSummary(extraction.text, originalName),
+          AIAdapter.analyzeClauses(extraction.text),
+          AIAdapter.checkCompleteness(extraction.text, 'General Commercial Contract'),
+          AIAdapter.extractObligations(extraction.text),
+        ]);
 
-      // 4. Upsert Summary
-      await prisma.contractSummary.upsert({
-        where: { documentId },
-        update: {
-          contractType: summary.contractType,
-          parties: summary.parties,
-          purpose: summary.purpose,
-          effectiveDate: summary.effectiveDate,
-          endDate: summary.endDate,
-          paymentTerms: summary.paymentTerms,
-          responsibilities: summary.responsibilities,
-          terminationConditions: summary.terminationConditions,
-          confidentialityTerms: summary.confidentialityTerms,
-          liabilityTerms: summary.liabilityTerms,
-          renewalProvisions: summary.renewalProvisions,
-          importantDeadlines: summary.importantDeadlines,
-          missingInfo: summary.missingInfo,
-          rawSummary: summary.rawSummary,
-          analysisProvider: summary.analysisProvider,
-        },
-        create: {
-          documentId,
-          contractType: summary.contractType,
-          parties: summary.parties,
-          purpose: summary.purpose,
-          effectiveDate: summary.effectiveDate,
-          endDate: summary.endDate,
-          paymentTerms: summary.paymentTerms,
-          responsibilities: summary.responsibilities,
-          terminationConditions: summary.terminationConditions,
-          confidentialityTerms: summary.confidentialityTerms,
-          liabilityTerms: summary.liabilityTerms,
-          renewalProvisions: summary.renewalProvisions,
-          importantDeadlines: summary.importantDeadlines,
-          missingInfo: summary.missingInfo,
-          rawSummary: summary.rawSummary,
-          analysisProvider: summary.analysisProvider,
-        },
-      });
+        // Save all analyses and their input hash atomically; a failed stage remains retryable.
+        await prisma.$transaction(async tx => {
+          // 4. Upsert Summary
+          await tx.contractSummary.upsert({
+            where: { documentId },
+            update: {
+              contractType: summary.contractType,
+              parties: summary.parties,
+              purpose: summary.purpose,
+              effectiveDate: summary.effectiveDate,
+              endDate: summary.endDate,
+              paymentTerms: summary.paymentTerms,
+              responsibilities: summary.responsibilities,
+              terminationConditions: summary.terminationConditions,
+              confidentialityTerms: summary.confidentialityTerms,
+              liabilityTerms: summary.liabilityTerms,
+              renewalProvisions: summary.renewalProvisions,
+              importantDeadlines: summary.importantDeadlines,
+              missingInfo: summary.missingInfo,
+              rawSummary: summary.rawSummary,
+              analysisProvider: summary.analysisProvider,
+            },
+            create: {
+              documentId,
+              contractType: summary.contractType,
+              parties: summary.parties,
+              purpose: summary.purpose,
+              effectiveDate: summary.effectiveDate,
+              endDate: summary.endDate,
+              paymentTerms: summary.paymentTerms,
+              responsibilities: summary.responsibilities,
+              terminationConditions: summary.terminationConditions,
+              confidentialityTerms: summary.confidentialityTerms,
+              liabilityTerms: summary.liabilityTerms,
+              renewalProvisions: summary.renewalProvisions,
+              importantDeadlines: summary.importantDeadlines,
+              missingInfo: summary.missingInfo,
+              rawSummary: summary.rawSummary,
+              analysisProvider: summary.analysisProvider,
+            },
+          });
 
-      // 5. Replace Clause Findings
-      await prisma.clauseFinding.deleteMany({ where: { documentId } });
-      if (clauses.length > 0) {
-        await prisma.clauseFinding.createMany({
-          data: clauses.map((c) => ({
-            documentId,
-            category: c.category,
-            title: c.title,
-            excerpt: c.excerpt,
-            pageNumber: c.pageNumber || 1,
-            plainLanguageExplanation: c.plainLanguageExplanation,
-            riskLevel: c.riskLevel,
-            potentialConcern: c.potentialConcern,
-            reviewQuestion: c.reviewQuestion,
-            reviewStatus: 'PENDING',
-          })),
-        });
-      }
+          // 5. Replace Clause Findings
+          await tx.clauseFinding.deleteMany({ where: { documentId } });
+          if (clauses.length > 0) {
+            await tx.clauseFinding.createMany({
+              data: clauses.map((c) => ({
+                documentId,
+                category: c.category,
+                title: c.title,
+                excerpt: c.excerpt,
+                pageNumber: c.pageNumber || 1,
+                plainLanguageExplanation: c.plainLanguageExplanation,
+                riskLevel: c.riskLevel,
+                potentialConcern: c.potentialConcern,
+                reviewQuestion: c.reviewQuestion,
+                reviewStatus: 'PENDING',
+              })),
+            });
+          }
 
-      // 6. Replace Completeness Checks
-      await prisma.completenessCheck.deleteMany({ where: { documentId } });
-      if (completeness.length > 0) {
-        await prisma.completenessCheck.createMany({
-          data: completeness.map((comp) => ({
-            documentId,
-            contractCategory: 'Commercial Contract',
-            expectedSection: comp.expectedSection,
-            detectedTitle: comp.detectedTitle,
-            status: comp.status,
-            excerpt: comp.excerpt,
-            pageNumber: comp.pageNumber,
-            reason: comp.reason,
-            isReviewed: false,
-          })),
-        });
-      }
+          // 6. Replace Completeness Checks
+          await tx.completenessCheck.deleteMany({ where: { documentId } });
+          if (completeness.length > 0) {
+            await tx.completenessCheck.createMany({
+              data: completeness.map((comp) => ({
+                documentId,
+                contractCategory: 'Commercial Contract',
+                expectedSection: comp.expectedSection,
+                detectedTitle: comp.detectedTitle,
+                status: comp.status,
+                excerpt: comp.excerpt,
+                pageNumber: comp.pageNumber,
+                reason: comp.reason,
+                isReviewed: false,
+              })),
+            });
+          }
 
-      // 7. Replace Extracted Obligations
-      await prisma.extractedObligation.deleteMany({ where: { documentId } });
-      if (obligations.length > 0) {
-        await prisma.extractedObligation.createMany({
-          data: obligations.map((ob) => ({
-            documentId,
-            category: ob.category,
-            description: ob.description,
-            responsibleParty: ob.responsibleParty,
-            dueDateOrPeriod: ob.dueDateOrPeriod,
-            isCalendarDate: ob.isCalendarDate,
-            excerpt: ob.excerpt,
-            pageNumber: ob.pageNumber,
-            confidence: ob.confidence,
-            reviewStatus: 'UNREVIEWED',
-          })),
+          // 7. Replace Extracted Obligations
+          await tx.extractedObligation.deleteMany({ where: { documentId } });
+          if (obligations.length > 0) {
+            await tx.extractedObligation.createMany({
+              data: obligations.map((ob) => ({
+                documentId,
+                category: ob.category,
+                description: ob.description,
+                responsibleParty: ob.responsibleParty,
+                dueDateOrPeriod: ob.dueDateOrPeriod,
+                isCalendarDate: ob.isCalendarDate,
+                excerpt: ob.excerpt,
+                pageNumber: ob.pageNumber,
+                confidence: ob.confidence,
+                reviewStatus: 'UNREVIEWED',
+              })),
+            });
+          }
+
+          await tx.document.update({ where: { id: documentId }, data: {
+            ocrMetadata: JSON.stringify({ ...extraction.ocrResult, analysisTextHash: analysisHash }),
+          } });
         });
       }
 
@@ -208,8 +270,9 @@ export class DocumentController {
         where: { id: documentId },
         data: {
           status: 'COMPLETED',
+          ragStatus: RagService.embeddingEnabled ? 'READY' : 'KEYWORD_READY',
           ocrStatus,
-          ocrMetadata: ocrMetaJson,
+          ocrMetadata: JSON.stringify({ ...extraction.ocrResult, analysisTextHash: analysisHash }),
           pageCount: extraction.pageCount,
           extractedText: extraction.text,
           errorMessage: extraction.warningMessage || null,
@@ -242,16 +305,17 @@ export class DocumentController {
         },
       };
     } catch (err: any) {
-      console.error(`[DocumentController] Processing failed for doc ${documentId}:`, err);
+      console.error(`[DocumentController] Processing failed for doc ${documentId}.`);
       await prisma.document.update({
         where: { id: documentId },
         data: {
           status: 'FAILED',
-          errorMessage: err.message || 'Unknown processing error',
+          ragStatus: 'FAILED',
+          errorMessage: processingError,
         },
       });
       if (jobId) {
-        JobQueueService.failJob(jobId, err.message || 'Unknown processing error');
+        JobQueueService.failJob(jobId, processingError);
       }
       throw err;
     }
@@ -306,7 +370,7 @@ export class DocumentController {
               job.id
             );
           } catch (bgErr) {
-            console.error('[DocumentController] Background upload processing error:', bgErr);
+            console.error('[DocumentController] Background upload processing failed.');
           }
         });
 
@@ -335,18 +399,19 @@ export class DocumentController {
         jobId: job.id,
       });
     } catch (err: any) {
-      console.error('Upload processing error:', err);
+      console.error('Upload processing failed.');
       if (createdDoc) {
         await prisma.document.update({
           where: { id: createdDoc.id },
           data: {
             status: 'FAILED',
-            errorMessage: err.message || 'Unknown processing error',
+            ragStatus: 'FAILED',
+            errorMessage: processingError,
           },
         });
       }
       res.status(500).json({
-        error: `Document processing failed: ${err.message || 'Error parsing contract file'}`,
+        error: processingError,
       });
     }
   }
@@ -360,6 +425,10 @@ export class DocumentController {
       const job = JobQueueService.getJob(jobId);
 
       if (!job) {
+        res.status(404).json({ error: 'Job not found.' });
+        return;
+      }
+      if (!isResourceOwner(job.userId, req.user?.id || '')) {
         res.status(404).json({ error: 'Job not found.' });
         return;
       }
@@ -468,7 +537,7 @@ export class DocumentController {
         try {
           fs.unlinkSync(doc.filePath);
         } catch (e) {
-          console.warn('Could not delete file from disk:', e);
+          console.warn('Could not delete document file from disk.');
         }
       }
 
@@ -494,7 +563,7 @@ export class DocumentController {
       }
 
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `inline; filename="${doc.originalName}"`);
+      res.setHeader('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(doc.originalName)}`);
       fs.createReadStream(doc.filePath).pipe(res);
     } catch (error: any) {
       res.status(500).json({ error: 'Failed to stream document file.' });
@@ -609,13 +678,13 @@ export class DocumentController {
       }
 
       const updated = await prisma.clauseFinding.update({
-        where: { id: clauseId },
+        where: { id: clauseId, documentId: req.params.id },
         data: { reviewStatus },
       });
 
       res.json({ message: 'Clause review status updated.', clause: updated });
     } catch (error: any) {
-      res.status(500).json({ error: 'Failed to update clause review status.' });
+      res.status(error?.code === 'P2025' ? 404 : 500).json({ error: 'Failed to update clause review status.' });
     }
   }
 
@@ -643,15 +712,16 @@ export class DocumentController {
     try {
       const { checkId } = req.params;
       const { isReviewed } = req.body;
+      if (typeof isReviewed !== 'boolean') { res.status(400).json({ error: 'isReviewed must be boolean.' }); return; }
 
       const updated = await prisma.completenessCheck.update({
-        where: { id: checkId },
+        where: { id: checkId, documentId: req.params.id },
         data: { isReviewed: !!isReviewed },
       });
 
       res.json({ message: 'Completeness check updated.', check: updated });
     } catch (error: any) {
-      res.status(500).json({ error: 'Failed to update completeness review status.' });
+      res.status(error?.code === 'P2025' ? 404 : 500).json({ error: 'Failed to update completeness review status.' });
     }
   }
 
@@ -686,13 +756,13 @@ export class DocumentController {
       }
 
       const updated = await prisma.extractedObligation.update({
-        where: { id: obligationId },
+        where: { id: obligationId, documentId: req.params.id },
         data: { reviewStatus },
       });
 
       res.json({ message: 'Obligation status updated.', obligation: updated });
     } catch (error: any) {
-      res.status(500).json({ error: 'Failed to update obligation status.' });
+      res.status(error?.code === 'P2025' ? 404 : 500).json({ error: 'Failed to update obligation status.' });
     }
   }
 
@@ -724,6 +794,10 @@ export class DocumentController {
         });
       }
 
+      const document = await prisma.document.findUnique({ where: { id }, select: { status: true, ragStatus: true } });
+      if (!document || document.status !== 'COMPLETED' || !['READY', 'KEYWORD_READY'].includes(document.ragStatus)) {
+        conversation.messages = conversation.messages.map(message => ({ ...message, sourceCitations: null }));
+      }
       res.json({ conversation });
     } catch (error: any) {
       res.status(500).json({ error: 'Failed to retrieve chat session.' });
@@ -734,13 +808,23 @@ export class DocumentController {
    * Send Question to Chatbot
    */
   static async sendChatMessage(req: Request, res: Response): Promise<void> {
+    const requestStartedAt = performance.now();
     try {
       const { id } = req.params;
       const userId = req.user!.id;
       const { question } = req.body;
 
-      if (!question || typeof question !== 'string' || question.trim().length === 0) {
+      if (!question || typeof question !== 'string' || question.trim().length === 0 || question.length > 2000) {
         res.status(400).json({ error: 'Please enter a valid question.' });
+        return;
+      }
+
+      const document = await prisma.document.findFirst({
+        where: { id, userId, status: 'COMPLETED', ragStatus: { in: ['READY', 'KEYWORD_READY'] } },
+        select: { id: true, originalName: true, ocrMetadata: true, updatedAt: true },
+      });
+      if (!document) {
+        res.status(409).json({ error: 'This document is not ready for grounded chat yet.' });
         return;
       }
 
@@ -769,31 +853,60 @@ export class DocumentController {
 
       // Fetch Document Chunks for Retrieval Grounding
       const chunks = await prisma.documentChunk.findMany({
-        where: { documentId: id },
+        where: authorizedChunkFilter(id, userId),
         orderBy: { chunkIndex: 'asc' },
       });
 
-      // Get Grounded Answer
-      const answerResult = await AIAdapter.answerQuestion(question, chunks);
+      if (!chunks.length) {
+        res.status(409).json({ error: 'No usable text has been indexed for this document. Review OCR or retry processing.' });
+        return;
+      }
 
-      // Record Assistant Message with citations
-      const assistantMsg = await prisma.chatMessage.create({
-        data: {
-          conversationId: conversation.id,
-          role: 'assistant',
-          content: answerResult.answer,
+      if (RagService.embeddingEnabled && chunks.some(c => c.embeddingModel !== RagService.embeddingModel || !RagService.validVector(c.embedding))) {
+        res.status(409).json({ error: 'The embedding index needs rebuilding for the current model. Use Retry processing in OCR Preview.' }); return;
+      }
+      const retrievalStartedAt = performance.now();
+      const retrieved = await RagService.retrieve(question.trim(), chunks);
+      const retrievalLatencyMs = Math.round(performance.now() - retrievalStartedAt);
+      const ocrMeta = document.ocrMetadata ? JSON.parse(document.ocrMetadata) : null;
+      const lowConfidencePages = new Set<number>(
+        (ocrMeta?.pages || []).filter((page: any) => page.hasLowConfidence || page.flagged).map((page: any) => page.pageNumber)
+      );
+      const evidence = retrieved.map((chunk) => ({
+        ...chunk,
+        lowConfidence: lowConfidencePages.has(chunk.pageNumber),
+      }));
+
+      // Get Grounded Answer
+      const answerResult = await AIAdapter.answerQuestion(question.trim(), evidence, [], document.originalName);
+
+      // Lock the document revision while saving: indexing invalidates old citations after this lock.
+      const assistantMsg = await prisma.$transaction(async tx => {
+        await tx.$queryRaw`SELECT id FROM documents WHERE id = ${id} AND "userId" = ${userId} FOR UPDATE`;
+        const stillCurrent = await tx.document.findFirst({ where: { id, userId,
+          updatedAt: document.updatedAt, status: 'COMPLETED', ragStatus: { in: ['READY', 'KEYWORD_READY'] } } });
+        if (!stillCurrent) return null;
+        return tx.chatMessage.create({ data: {
+          conversationId: conversation.id, role: 'assistant', content: answerResult.answer,
           sourceCitations: JSON.stringify(answerResult.citations),
-        },
+        } });
       });
+      if (!assistantMsg) { res.status(409).json({ error: 'Document changed during this answer. Please retry.' }); return; }
 
       res.json({
         message: assistantMsg,
         citations: answerResult.citations,
         isDocumentGrounded: answerResult.isDocumentGrounded,
         provider: answerResult.provider,
+        insufficientEvidence: answerResult.insufficientEvidence,
+        retrievalMode: answerResult.retrievalMode || 'keyword_fallback',
+        metrics: {
+          retrievalLatencyMs,
+          totalResponseTimeMs: Math.round(performance.now() - requestStartedAt),
+        },
       });
     } catch (error: any) {
-      console.error('Chat error:', error);
+      console.error('Document chat failed.');
       res.status(500).json({ error: 'Failed to process question.' });
     }
   }
@@ -906,7 +1019,7 @@ export class DocumentController {
         ocrMetadata,
       });
     } catch (error: any) {
-      console.error('getOcrPreview error:', error);
+      console.error('OCR preview retrieval failed.');
       res.status(500).json({ error: 'Failed to retrieve OCR preview.' });
     }
   }
@@ -915,180 +1028,38 @@ export class DocumentController {
    * Verify and update OCR text, then run/refresh AI analysis pipeline
    */
   static async verifyOcrAndAnalyze(req: Request, res: Response): Promise<void> {
+    const { id } = req.params;
     try {
-      const { id } = req.params;
-      const { pages } = req.body; // Array of { pageNumber: number, text: string }
-
-      const doc = await prisma.document.findUnique({
-        where: { id },
+      const payload = z.object({ pages: z.array(z.object({ pageNumber: z.number().int().positive(),
+        text: z.string().max(200000) })).min(1).max(1000) }).safeParse(req.body);
+      if (!payload.success) { res.status(400).json({ error: 'Provide valid page numbers and text.' }); return; }
+      const doc = await prisma.document.findFirst({ where: { id, userId: req.user!.id } });
+      if (!doc) { res.status(404).json({ error: 'Document not found.' }); return; }
+      const updates = payload.data.pages;
+      if (updates.some(p => p.pageNumber > doc.pageCount) || new Set(updates.map(p => p.pageNumber)).size !== updates.length) {
+        res.status(400).json({ error: 'Page numbers must be unique and within the original PDF.' }); return;
+      }
+      const meta = doc.ocrMetadata ? JSON.parse(doc.ocrMetadata) : null;
+      if (!meta?.pages) { res.status(409).json({ error: 'Extract the document before verifying its pages.' }); return; }
+      const pages: PageOcrMetadata[] = meta.pages.map((page: PageOcrMetadata) => {
+        const update = updates.find(p => p.pageNumber === page.pageNumber);
+        return update ? { ...page, text: update.text, extractionType: 'verified_user',
+          flagged: false, flaggedReason: undefined, hasLowConfidence: false, confidence: 1,
+          wordCount: update.text.split(/\s+/).filter(Boolean).length } : page;
       });
-
-      if (!doc) {
-        res.status(404).json({ error: 'Document not found.' });
-        return;
-      }
-
-      if (!pages || !Array.isArray(pages) || pages.length === 0) {
-        res.status(400).json({ error: 'Invalid payload: pages array is required.' });
-        return;
-      }
-
-      // 1. Reconstruct fullText with page markers
-      const fullText = pages
-        .map((p: any) => `--- PAGE_${p.pageNumber} ---\n${(p.text || '').trim()}`)
-        .join('\n\n');
-
-      // 2. Re-chunk pages
-      const newChunks = PdfService.chunkPages(pages);
-
-      // 3. Update Document chunks
-      await prisma.documentChunk.deleteMany({ where: { documentId: id } });
-      if (newChunks.length > 0) {
-        await prisma.documentChunk.createMany({
-          data: newChunks.map((c) => ({
-            documentId: id,
-            chunkIndex: c.chunkIndex,
-            pageNumber: c.pageNumber,
-            content: c.content,
-          })),
-        });
-      }
-
-      // 4. Run AI legal analysis on verified text
-      const [summary, clauses, completeness, obligations] = await Promise.all([
-        AIAdapter.generateSummary(fullText, doc.originalName),
-        AIAdapter.analyzeClauses(fullText),
-        AIAdapter.checkCompleteness(fullText, 'General Commercial Contract'),
-        AIAdapter.extractObligations(fullText),
-      ]);
-
-      // 5. Replace summary
-      await prisma.contractSummary.deleteMany({ where: { documentId: id } });
-      await prisma.contractSummary.create({
-        data: {
-          documentId: id,
-          contractType: summary.contractType,
-          parties: summary.parties,
-          purpose: summary.purpose,
-          effectiveDate: summary.effectiveDate,
-          endDate: summary.endDate,
-          paymentTerms: summary.paymentTerms,
-          responsibilities: summary.responsibilities,
-          terminationConditions: summary.terminationConditions,
-          confidentialityTerms: summary.confidentialityTerms,
-          liabilityTerms: summary.liabilityTerms,
-          renewalProvisions: summary.renewalProvisions,
-          importantDeadlines: summary.importantDeadlines,
-          missingInfo: summary.missingInfo,
-          rawSummary: summary.rawSummary,
-          analysisProvider: summary.analysisProvider,
-        },
-      });
-
-      // 6. Replace clauses
-      await prisma.clauseFinding.deleteMany({ where: { documentId: id } });
-      if (clauses.length > 0) {
-        await prisma.clauseFinding.createMany({
-          data: clauses.map((c) => ({
-            documentId: id,
-            category: c.category,
-            title: c.title,
-            excerpt: c.excerpt,
-            pageNumber: c.pageNumber || 1,
-            plainLanguageExplanation: c.plainLanguageExplanation,
-            riskLevel: c.riskLevel,
-            potentialConcern: c.potentialConcern,
-            reviewQuestion: c.reviewQuestion,
-            reviewStatus: 'PENDING',
-          })),
-        });
-      }
-
-      // 7. Replace completeness checks
-      await prisma.completenessCheck.deleteMany({ where: { documentId: id } });
-      if (completeness.length > 0) {
-        await prisma.completenessCheck.createMany({
-          data: completeness.map((comp) => ({
-            documentId: id,
-            contractCategory: 'Commercial Contract',
-            expectedSection: comp.expectedSection,
-            detectedTitle: comp.detectedTitle,
-            status: comp.status,
-            excerpt: comp.excerpt,
-            pageNumber: comp.pageNumber,
-            reason: comp.reason,
-            isReviewed: false,
-          })),
-        });
-      }
-
-      // 8. Replace obligations
-      await prisma.extractedObligation.deleteMany({ where: { documentId: id } });
-      if (obligations.length > 0) {
-        await prisma.extractedObligation.createMany({
-          data: obligations.map((ob) => ({
-            documentId: id,
-            category: ob.category,
-            description: ob.description,
-            responsibleParty: ob.responsibleParty,
-            dueDateOrPeriod: ob.dueDateOrPeriod,
-            isCalendarDate: ob.isCalendarDate,
-            excerpt: ob.excerpt,
-            pageNumber: ob.pageNumber,
-            confidence: ob.confidence,
-            reviewStatus: 'UNREVIEWED',
-          })),
-        });
-      }
-
-      // 9. Update OCR metadata to mark verified
-      let existingMeta: any = {};
-      if (doc.ocrMetadata) {
-        try { existingMeta = JSON.parse(doc.ocrMetadata); } catch (_) {}
-      }
-      existingMeta.isVerifiedByUser = true;
-      existingMeta.hasLowConfidencePages = false;
-
-      // Update page texts in metadata
-      if (Array.isArray(existingMeta.pages)) {
-        for (const p of pages) {
-          const match = existingMeta.pages.find((m: any) => m.pageNumber === p.pageNumber);
-          if (match) {
-            match.text = p.text;
-            match.flagged = false;
-            match.hasLowConfidence = false;
-          }
-        }
-      }
-
-      const updatedDoc = await prisma.document.update({
-        where: { id },
-        data: {
-          status: 'COMPLETED',
-          ocrStatus: 'VERIFIED',
-          extractedText: fullText,
-          errorMessage: null,
-          ocrMetadata: JSON.stringify(existingMeta),
-        },
-        include: {
-          summary: true,
-          _count: {
-            select: {
-              clauses: true,
-              completenessChecks: true,
-              obligations: true,
-            },
-          },
-        },
-      });
-
-      res.json({
-        message: 'Extracted text verified and legal intelligence scan completed successfully.',
-        document: updatedDoc,
-      });
-    } catch (error: any) {
-      console.error('verifyOcrAndAnalyze error:', error);
-      res.status(500).json({ error: `Verification failed: ${error.message}` });
+      const text = pages.map(p => `--- PAGE_${p.pageNumber} ---\n${p.text}`).join('\n\n');
+      const chunks = PdfService.chunkPages(pages);
+      if (!chunks.length) { res.status(400).json({ error: 'At least one page must contain usable text.' }); return; }
+      const claimed = await prisma.document.updateMany({ where: { id, updatedAt: doc.updatedAt, status: { not: 'PROCESSING' } },
+        data: { status: 'PROCESSING', ragStatus: 'INDEXING' } });
+      if (!claimed.count) { res.status(409).json({ error: 'Document processing is already running.' }); return; }
+      const job = JobQueueService.createJob(id, doc.userId, doc.pageCount);
+      const extraction: PdfExtractionResult = { text, chunks, pageCount: doc.pageCount, isScannedOrEmpty: false,
+        ocrResult: { ...meta, pages, fullText: text, hasLowConfidencePages: pages.some(p => p.hasLowConfidence) } };
+      setImmediate(() => { void DocumentController.processDocumentAsync(id, doc.filePath, doc.originalName, job.id, { extraction, previouslyCompleted: doc.status === 'COMPLETED' }).catch(() => {}); });
+      res.status(202).json({ jobId: job.id, status: 'PROCESSING', document: doc });
+    } catch {
+      res.status(500).json({ error: 'Unable to verify and index the document.' });
     }
   }
 
@@ -1112,11 +1083,37 @@ export class DocumentController {
       }
 
       const isSync = req.query.sync === 'true';
-      const job = JobQueueService.createJob(doc.id, doc.userId, doc.pageCount);
 
+      if (pageNumbers !== undefined && (!Array.isArray(pageNumbers) || pageNumbers.length === 0)) {
+        res.status(400).json({ error: 'pageNumbers must be a nonempty array.' }); return;
+      }
+      if (bypassCache !== undefined && typeof bypassCache !== 'boolean') {
+        res.status(400).json({ error: 'bypassCache must be a boolean.' }); return;
+      }
+      const requestedPages: number[] | undefined = pageNumbers;
+      if (requestedPages && requestedPages.some((page: unknown) => !Number.isInteger(page) || (page as number) < 1 || (page as number) > doc.pageCount)) {
+        res.status(400).json({ error: 'pageNumbers must contain valid page numbers for this document.' });
+        return;
+      }
+      if (requestedPages && new Set(requestedPages).size !== requestedPages.length) {
+        res.status(400).json({ error: 'pageNumbers must not contain duplicates.' });
+        return;
+      }
+      const claimed = await prisma.document.updateMany({ where: { id, updatedAt: doc.updatedAt, status: { not: 'PROCESSING' } }, data: { status: 'PROCESSING', ragStatus: 'EXTRACTING' } });
+      if (!claimed.count) { res.status(409).json({ error: 'Document processing is already running.' }); return; }
+      const job = JobQueueService.createJob(doc.id, doc.userId, doc.pageCount);
+      let preservedPages: PageOcrMetadata[] = [];
+      if (doc.ocrMetadata && doc.contentHash === OcrCacheService.computeDocHash(doc.filePath)) {
+        try {
+          const existing = JSON.parse(doc.ocrMetadata);
+          preservedPages = (existing.pages || []).filter((page: PageOcrMetadata) => requestedPages ? !requestedPages.includes(page.pageNumber) : page.extractionType !== 'failed' && Boolean(page.text.trim() || page.extractionType === 'verified_user'));
+        } catch { preservedPages = []; }
+      }
       const runOpts = {
-        forcePageNumbers: Array.isArray(pageNumbers) && pageNumbers.length > 0 ? pageNumbers : undefined,
-        bypassCache: bypassCache !== false,
+        previouslyCompleted: doc.status === 'COMPLETED',
+        forcePageNumbers: requestedPages,
+        preservedPages,
+        bypassCache: bypassCache === true || Boolean(requestedPages),
       };
 
       if (!isSync) {
@@ -1130,7 +1127,7 @@ export class DocumentController {
               runOpts
             );
           } catch (e) {
-            console.error('[DocumentController] reOcrDocument background error:', e);
+            console.error('[DocumentController] Background reprocessing failed.');
           }
         });
 
@@ -1158,8 +1155,8 @@ export class DocumentController {
         jobId: job.id,
       });
     } catch (error: any) {
-      console.error('reOcrDocument error:', error);
-      res.status(500).json({ error: `Re-OCR failed: ${error.message}` });
+      console.error('Document reprocessing failed.');
+      res.status(500).json({ error: processingError });
     }
   }
 }

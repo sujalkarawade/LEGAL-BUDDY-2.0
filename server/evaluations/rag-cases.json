@@ -1,0 +1,83 @@
+{
+  "notice": "Synthetic evaluation fixtures for repeatable retrieval checks; these are not real contracts and do not establish accuracy or Marathi OCR reliability.",
+  "cases": [
+    {
+      "id": "explicit-payment",
+      "document": "short-commercial-agreement",
+      "question": "What is the invoice payment period?",
+      "expectedPage": 2,
+      "expectedEvidence": "Invoices are payable within thirty days",
+      "expectedAnswer": "Payment is due within 30 days."
+    },
+    {
+      "id": "long-document",
+      "document": "long-commercial-agreement",
+      "question": "How long is the cure period after notice of breach?",
+      "expectedPage": 18,
+      "expectedEvidence": "notice of breach and thirty days to cure",
+      "expectedAnswer": "The agreement provides a 30-day cure period after notice."
+    },
+    {
+      "id": "clause-number",
+      "document": "short-commercial-agreement",
+      "question": "What does clause 7.2 say?",
+      "expectedPage": 4,
+      "expectedEvidence": "7.2 Governing Law. This Agreement is governed by the laws of Maharashtra.",
+      "expectedAnswer": "Clause 7.2 selects Maharashtra law."
+    },
+    {
+      "id": "date-and-amount",
+      "document": "short-commercial-agreement",
+      "question": "What is the effective date and annual fee?",
+      "expectedPage": 1,
+      "expectedEvidence": "effective 1 April 2026; annual fee INR 240,000",
+      "expectedAnswer": "Effective 1 April 2026; annual fee INR 240,000."
+    },
+    {
+      "id": "absent-answer",
+      "document": "short-commercial-agreement",
+      "question": "Which court has exclusive jurisdiction?",
+      "expectedPage": null,
+      "expectedEvidence": null,
+      "expectedAnswer": "The retrieved contract text does not specify an exclusive court."
+    },
+    {
+      "id": "conflicting-passages",
+      "document": "conflicting-terms",
+      "question": "What is the termination notice period?",
+      "expectedPage": [
+        3,
+        11
+      ],
+      "expectedEvidence": [
+        "Termination requires sixty days written notice",
+        "Termination requires thirty days written notice"
+      ],
+      "expectedAnswer": "The document contains conflicting 60-day and 30-day notice terms; verify which controls."
+    },
+    {
+      "id": "marathi-english-scan",
+      "document": "marathi-english-scan",
+      "question": "देय रक्कम किती आहे?",
+      "expectedPage": 2,
+      "expectedEvidence": "रक्कम INR 50,000 payable within 15 days",
+      "expectedAnswer": "INR 50,000 is payable within 15 days, subject to OCR verification."
+    },
+    {
+      "id": "low-quality-ocr",
+      "document": "low-quality-scan",
+      "question": "What is the penalty amount?",
+      "expectedPage": 5,
+      "expectedEvidence": "OCR text: penalty amount unclear",
+      "expectedAnswer": "The amount is unclear in OCR and must be checked against the original page."
+    },
+    {
+      "id": "cross-user-document",
+      "document": "user-b-private-document",
+      "question": "What is the payment amount?",
+      "expectedPage": null,
+      "expectedEvidence": null,
+      "expectedAnswer": "Access denied; no chunks may be retrieved for this user."
+    }
+  ]
+}

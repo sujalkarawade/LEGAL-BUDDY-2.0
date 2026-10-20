@@ -53,7 +53,14 @@ export interface ChatAnswerResult {
     excerpt: string;
     pageNumber: number;
     score: number;
+    verified?: boolean;
+    chunkId?: string;
+    documentName?: string;
+    extractionMethod?: string;
+    lowConfidence?: boolean;
   }>;
   isDocumentGrounded: boolean;
+  insufficientEvidence?: boolean;
   provider: string;
+  retrievalMode?: 'semantic_hybrid' | 'keyword_fallback';
 }

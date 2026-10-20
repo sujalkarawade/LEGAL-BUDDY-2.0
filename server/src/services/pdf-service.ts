@@ -1,12 +1,16 @@
 import fs from 'fs';
 import pdfParse from 'pdf-parse';
+import { PDFDocument } from 'pdf-lib';
 import { PaddleOcrService, type PaddlePageResult } from './ocr/paddle-ocr.service.js';
 import { DocumentOcrResult, PageOcrMetadata } from './ocr/ocr.types.js';
+import { RAG_CHUNK_OVERLAP, RAG_CHUNK_SIZE } from '../config/index.js';
 
 export interface ExtractedPageChunk {
   chunkIndex: number;
   pageNumber: number;
   content: string;
+  extractionMethod: string;
+  clauseHeading?: string;
 }
 
 export interface PdfExtractionResult {
@@ -28,49 +32,48 @@ export class PdfService {
     // Exclude bare numbers, dashes, whitespace
     const nonDigitText = clean.replace(/[\d\s\-_.,/\\()]/g, '');
     const words = clean.split(/\s+/).filter((w) => w.length > 1);
-    return nonDigitText.length >= 35 && words.length >= 5;
+    return nonDigitText.length >= 8 && words.length >= 2;
   }
 
   /**
    * Chunks page text cleanly into paragraphs without crossing page boundaries.
    */
-  static chunkPages(pages: Array<{ pageNumber: number; text: string }>): ExtractedPageChunk[] {
+  static chunkPages(pages: Array<{ pageNumber: number; text: string; extractionType?: string }>): ExtractedPageChunk[] {
     const chunks: ExtractedPageChunk[] = [];
-    let globalChunkIndex = 0;
-
     for (const page of pages) {
-      const cleanPageText = page.text.trim();
-      if (!cleanPageText) continue;
-
-      // Split by paragraphs
-      const paragraphs = cleanPageText.split(/\n\s*\n/);
-      let currentChunkText = '';
-
-      for (const para of paragraphs) {
-        const trimmedPara = para.trim();
-        if (!trimmedPara) continue;
-
-        if ((currentChunkText + '\n\n' + trimmedPara).length > 1500 && currentChunkText.length > 0) {
-          chunks.push({
-            chunkIndex: globalChunkIndex++,
-            pageNumber: page.pageNumber,
-            content: currentChunkText.trim(),
-          });
-          currentChunkText = trimmedPara;
-        } else {
-          currentChunkText = currentChunkText ? `${currentChunkText}\n\n${trimmedPara}` : trimmedPara;
+      // Keep source substrings intact, including decimal amounts, clause numbers and Marathi marks.
+      if (page.extractionType === 'failed' || (page.text.match(/\p{L}/gu)?.length || 0) < 2) continue;
+      const text = page.text.replace(/\r\n/g, '\n').trim();
+      let start = 0;
+      while (start < text.length) {
+        const hardEnd = Math.min(start + RAG_CHUNK_SIZE, text.length);
+        let end = hardEnd;
+        if (hardEnd < text.length) {
+          const window = text.slice(start, hardEnd);
+          // Prefer paragraph/clause boundaries, then sentences, then whitespace.
+          const patterns = [/\n\s*\n|\n(?=\d+(?:\.\d+)*[.)]?\s)/g, /[.!?।](?=\s)/g, /\s/g];
+          for (const pattern of patterns) {
+            const candidates = [...window.matchAll(pattern)].filter(m => m.index! >= RAG_CHUNK_SIZE / 2);
+            if (candidates.length) {
+              const last = candidates[candidates.length - 1];
+              end = start + last.index! + last[0].length;
+              break;
+            }
+          }
         }
-      }
-
-      if (currentChunkText.trim().length > 0) {
-        chunks.push({
-          chunkIndex: globalChunkIndex++,
-          pageNumber: page.pageNumber,
-          content: currentChunkText.trim(),
-        });
+        const content = text.slice(start, end).trim();
+        if (content) {
+          const heading = content.split('\n')[0].match(/^(?:(?:section|clause|article)\s+)?\d+(?:\.\d+)*[.)]?\s+.{1,100}$/i)?.[0];
+          chunks.push({ chunkIndex: chunks.length, pageNumber: page.pageNumber, content,
+            extractionMethod: page.extractionType || 'selectable', clauseHeading: heading });
+        }
+        if (end === text.length) break;
+        let next = Math.max(start + 1, end - RAG_CHUNK_OVERLAP);
+        // Start overlap at a whole word, never inside a Devanagari grapheme.
+        while (next < end && next > 0 && !/\s/.test(text[next - 1])) next++;
+        start = next;
       }
     }
-
     return chunks;
   }
 
@@ -95,6 +98,7 @@ export class PdfService {
     options?: {
       bypassCache?: boolean;
       forcePageNumbers?: number[];
+      preservedPages?: PageOcrMetadata[];
       dpi?: number;
     }
   ): Promise<PdfExtractionResult> {
@@ -118,7 +122,7 @@ export class PdfService {
 
     // Step 1: Inspect selectable text page-by-page using pdf-parse
     const rawPageTexts: { pageNumber: number; text: string }[] = [];
-    let parsedTotalPages = 1;
+    let parsedTotalPages = (await PDFDocument.load(dataBuffer)).getPageCount();
 
     try {
       const parseOptions = {
@@ -147,7 +151,7 @@ export class PdfService {
       const parsed = await pdfParse(dataBuffer, parseOptions);
       parsedTotalPages = parsed.numpages || (rawPageTexts.length > 0 ? rawPageTexts.length : 1);
     } catch (parseErr: any) {
-      console.warn('[PdfService] pdf-parse pagerender warning/error:', parseErr?.message);
+      console.warn('[PdfService] Selectable text parsing failed; attempting page OCR.');
     }
 
     const totalPages = Math.max(parsedTotalPages, rawPageTexts.length, 1);
@@ -155,7 +159,9 @@ export class PdfService {
     // Step 2: Per-page detection (selectable vs image-based/scanned)
     const scannedPageNumbers: number[] = [];
     const selectablePageNumbers: number[] = [];
+    const reusedPageNumbers: number[] = [];
     const perPageSelectableMap = new Map<number, string>();
+    const preservedPageMap = new Map((options?.preservedPages || []).map((page) => [page.pageNumber, page]));
 
     for (let p = 1; p <= totalPages; p++) {
       const found = rawPageTexts.find((item) => item.pageNumber === p);
@@ -164,6 +170,8 @@ export class PdfService {
 
       if (options?.forcePageNumbers && options.forcePageNumbers.includes(p)) {
         scannedPageNumbers.push(p);
+      } else if (preservedPageMap.has(p)) {
+        reusedPageNumbers.push(p);
       } else if (this.isSubstantiveText(text)) {
         selectablePageNumbers.push(p);
       } else {
@@ -171,20 +179,21 @@ export class PdfService {
       }
     }
 
+    const reusedScannedCount = reusedPageNumbers.filter(p => preservedPageMap.get(p)!.isScanned).length;
     console.log(
       `[PdfService] Document page scan audit: Total ${totalPages} pages | ` +
-      `Selectable: ${selectablePageNumbers.length} | Scanned/Image: ${scannedPageNumbers.length}`
+      `Selectable: ${selectablePageNumbers.length} | Scanned/Image: ${scannedPageNumbers.length} | Reused OCR pages: ${reusedPageNumbers.length}`
     );
 
     onProgress?.({
-      completedPages: selectablePageNumbers.length,
+      completedPages: selectablePageNumbers.length + reusedPageNumbers.length,
       totalPages,
       stage: `Page audit complete: ${selectablePageNumbers.length} digital selectable, ${scannedPageNumbers.length} scanned/image page(s)`,
-      scannedCount: scannedPageNumbers.length,
-      selectableCount: selectablePageNumbers.length,
+      scannedCount: scannedPageNumbers.length + reusedScannedCount,
+      selectableCount: selectablePageNumbers.length + reusedPageNumbers.length - reusedScannedCount,
     });
 
-    const isAllSelectable = scannedPageNumbers.length === 0;
+    const isAllSelectable = scannedPageNumbers.length === 0 && reusedPageNumbers.length === 0;
     const isOcrConfigured = PaddleOcrService.isConfigured();
 
     // Case A: Entire document has selectable digital text -> No OCR needed
@@ -241,29 +250,31 @@ export class PdfService {
         text: fullText,
         pageCount: totalPages,
         chunks,
-        isScannedOrEmpty: false,
+        isScannedOrEmpty: chunks.length === 0,
         ocrResult,
       };
     }
 
     // Case B: Document contains scanned pages -> Run local PaddleOCR on them
-    if (isOcrConfigured) {
+    if (isOcrConfigured || scannedPageNumbers.length === 0) {
       try {
         console.log(
           `[PdfService] Running local PaddleOCR on ${scannedPageNumbers.length} scanned page(s)...`
         );
 
-        const ocrResult = await PaddleOcrService.analyzeScannedPages(
+        const ocrResult = scannedPageNumbers.length === 0
+          ? { pages: new Map<number, PaddlePageResult>(), capped: false }
+          : await PaddleOcrService.analyzeScannedPages(
           filePath,
           scannedPageNumbers,
           (ocrEvent) => {
-            const completedTotal = selectablePageNumbers.length + ocrEvent.completedPages;
+            const completedTotal = selectablePageNumbers.length + reusedPageNumbers.length + ocrEvent.completedPages;
             onProgress?.({
               completedPages: completedTotal,
               totalPages,
               stage: `Extracting scanned page ${ocrEvent.pageNumber} (${ocrEvent.completedPages}/${scannedPageNumbers.length} scanned) with PaddleOCR...`,
-              scannedCount: scannedPageNumbers.length,
-              selectableCount: selectablePageNumbers.length,
+              scannedCount: scannedPageNumbers.length + reusedScannedCount,
+              selectableCount: selectablePageNumbers.length + reusedPageNumbers.length - reusedScannedCount,
             });
           },
           options
@@ -294,6 +305,10 @@ export class PdfService {
               uncertainWordCount: 0,
               flagged: false,
             });
+          } else if (reusedPageNumbers.includes(p)) {
+            const preserved = preservedPageMap.get(p)!;
+            finalPagesMeta.push(preserved);
+            preserved.languages.forEach((language) => globalLanguages.add(language));
           } else {
             const ocrPage: PaddlePageResult | undefined = ocrResult.pages.get(p);
 
@@ -323,7 +338,7 @@ export class PdfService {
               const hasDevanagari = /[\u0900-\u097F]/.test(text);
               const langs = hasDevanagari ? ['en', 'mr'] : ['en'];
               langs.forEach((l) => globalLanguages.add(l));
-              const lowConfidence = ocrPage.confidence < 0.7;
+              const lowConfidence = ocrPage.confidence < 0.7 || Boolean(ocrPage.error);
 
               finalPagesMeta.push({
                 pageNumber: p,
@@ -374,8 +389,8 @@ export class PdfService {
 
         const mergedOcrResult: DocumentOcrResult = {
           totalPages,
-          scannedPagesCount: scannedPageNumbers.length,
-          selectablePagesCount: selectablePageNumbers.length,
+          scannedPagesCount: scannedPageNumbers.length + reusedScannedCount,
+          selectablePagesCount: selectablePageNumbers.length + reusedPageNumbers.length - reusedScannedCount,
           overallConfidence,
           detectedLanguages: Array.from(globalLanguages),
           pages: finalPagesMeta,
@@ -386,7 +401,7 @@ export class PdfService {
           isConfigured: true,
         };
 
-        const isScannedOrEmpty = fullText.replace(/---PAGE_\d+---/g, '').trim().length < 40;
+        const isScannedOrEmpty = chunks.length === 0;
 
         return {
           text: fullText,
@@ -399,14 +414,15 @@ export class PdfService {
           ocrResult: mergedOcrResult,
         };
       } catch (ocrErr: any) {
-        console.warn('[PdfService] Local PaddleOCR error, falling back:', ocrErr?.message);
+        console.warn('[PdfService] Local PaddleOCR failed; preserving available pages for review.');
         // Fallback gracefully without crashing
         return this.buildFallbackResult(
           totalPages,
           scannedPageNumbers,
           selectablePageNumbers,
           perPageSelectableMap,
-          `Local OCR encountered an issue: ${ocrErr?.message || ocrErr}`
+          'Local OCR failed. Check the OCR installation and retry unreadable pages.',
+          Array.from(preservedPageMap.values())
         );
       }
     }
@@ -418,7 +434,8 @@ export class PdfService {
       scannedPageNumbers,
       selectablePageNumbers,
       perPageSelectableMap,
-      'Scanned / photographed legal document detected. Local PaddleOCR (English & Marathi) could not run. Ensure Python and PaddleOCR are installed (see server/ocr/README.md), or verify text manually in OCR Preview.'
+      'Scanned / photographed legal document detected. Local PaddleOCR (English & Marathi) could not run. Ensure Python and PaddleOCR are installed (see server/ocr/README.md), or verify text manually in OCR Preview.',
+      Array.from(preservedPageMap.values())
     );
   }
 
@@ -430,10 +447,12 @@ export class PdfService {
     scannedPages: number[],
     selectablePages: number[],
     perPageSelectableMap: Map<number, string>,
-    warningMessage: string
+    warningMessage: string,
+    preservedPages: PageOcrMetadata[] = []
   ): PdfExtractionResult {
     const pagesMeta: PageOcrMetadata[] = [];
     const globalLanguages = new Set<string>(['en', 'mr']);
+    const preservedMap = new Map(preservedPages.map((page) => [page.pageNumber, page]));
 
     for (let p = 1; p <= totalPages; p++) {
       const isSelectable = selectablePages.includes(p);
@@ -454,12 +473,14 @@ export class PdfService {
           uncertainWordCount: 0,
           flagged: false,
         });
+      } else if (preservedMap.has(p)) {
+        pagesMeta.push(preservedMap.get(p)!);
       } else {
         pagesMeta.push({
           pageNumber: p,
           isScanned: true,
           extractionType: 'failed',
-          text: `[Page ${p}: Scanned/Photographed page - local OCR could not extract text. Verify manually in OCR Preview.]`,
+          text: '',
           wordCount: 0,
           confidence: 0.1,
           skewAngle: 0,
@@ -473,11 +494,11 @@ export class PdfService {
     }
 
     const fullText = pagesMeta.map((p) => `--- PAGE_${p.pageNumber} ---\n${p.text}`).join('\n\n');
-    const chunks = this.chunkPages(pagesMeta.filter((p) => !p.isScanned));
+    const chunks = this.chunkPages(pagesMeta);
 
     const ocrResult: DocumentOcrResult = {
       totalPages,
-      scannedPagesCount: scannedPages.length,
+      scannedPagesCount: scannedPages.length + preservedPages.filter((page) => page.isScanned).length,
       selectablePagesCount: selectablePages.length,
       overallConfidence: selectablePages.length > 0 ? 0.5 : 0.0,
       detectedLanguages: Array.from(globalLanguages),
@@ -494,7 +515,7 @@ export class PdfService {
       text: fullText,
       pageCount: totalPages,
       chunks,
-      isScannedOrEmpty: selectablePages.length === 0,
+      isScannedOrEmpty: chunks.length === 0,
       warningMessage,
       ocrResult,
     };

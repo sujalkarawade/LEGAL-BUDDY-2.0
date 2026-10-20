@@ -122,6 +122,7 @@ export class PaddleOcrService {
     try {
       child = spawn(pythonBin, [workerPath], {
         stdio: ['pipe', 'pipe', 'pipe'],
+        windowsHide: true,
         env: {
           ...process.env,
           PYTHONIOENCODING: 'utf-8',
@@ -192,7 +193,7 @@ export class PaddleOcrService {
           try {
             entry.onProgress(parsed as any as OcrProgressEvent);
           } catch (e) {
-            console.warn('[PaddleOcrService] onProgress callback threw:', e);
+            console.warn('[PaddleOcrService] Progress callback failed.');
           }
         }
         continue;
@@ -268,8 +269,7 @@ export class PaddleOcrService {
       console.log('[PaddleOcrService] Worker warm-up complete (model cached).');
     } catch (err: any) {
       console.warn(
-        '[PaddleOcrService] Warm-up failed (will retry lazily on first upload):',
-        err?.message || err
+        '[PaddleOcrService] Warm-up failed; check the local OCR installation. Will retry on upload.'
       );
     }
   }
@@ -356,25 +356,22 @@ export class PaddleOcrService {
       docHash = OcrCacheService.computeDocHash(filePath);
       cacheKey = OcrCacheService.getCacheKey(docHash, lang, dpi);
     } catch (e) {
-      console.warn('[PaddleOcrService] Could not compute doc hash for caching:', e);
+      console.warn('[PaddleOcrService] Could not compute the document hash for caching.');
     }
 
+    const reusedPages = new Map<number, PaddlePageResult>();
     if (!bypassCache && cacheKey) {
       const cached = OcrCacheService.get(cacheKey);
       if (cached && Array.isArray(cached.pages)) {
         const cachedMap = new Map<number, CachedPageResult>();
         cached.pages.forEach((p) => cachedMap.set(p.pageNumber, p));
 
-        // Check if all requested pages are in cache
-        const allPresent = uniquePages.every((pNum) => cachedMap.has(pNum));
-        if (allPresent) {
-          console.log(
-            `[PaddleOcrService] OCR cache hit for ${uniquePages.length} page(s) (key ${cacheKey}) - skipping OCR entirely.`
-          );
-          const pages = new Map<number, PaddlePageResult>();
+        {
+          const pages = reusedPages;
           let confSum = 0;
           for (const pNum of uniquePages) {
-            const cp = cachedMap.get(pNum)!;
+            const cp = cachedMap.get(pNum);
+            if (!cp || cp.error || !cp.text.trim()) continue;
             const text = (cp.text || '').trim();
             const lineCount = cp.lineCount ?? (text ? text.split('\n').filter(Boolean).length : 0);
             pages.set(pNum, {
@@ -406,7 +403,7 @@ export class PaddleOcrService {
           const overallConfidence =
             pages.size > 0 ? Math.round((confSum / pages.size) * 1000) / 1000 : 0;
 
-          return {
+          if (pages.size === uniquePages.length) return {
             pages,
             overallConfidence,
             paddleVersion: cached.paddleVersion,
@@ -420,13 +417,13 @@ export class PaddleOcrService {
     }
 
     // 2. Cap pages if exceeding safety threshold
-    let pagesToProcess = uniquePages;
+    let pagesToProcess = uniquePages.filter(page => !reusedPages.has(page));
     let capped = false;
-    if (uniquePages.length > OCR_MAX_PAGES) {
+    if (pagesToProcess.length > OCR_MAX_PAGES) {
       console.warn(
         `[PaddleOcrService] ${uniquePages.length} scanned pages requested; capping OCR to first ${OCR_MAX_PAGES}.`
       );
-      pagesToProcess = uniquePages.slice(0, OCR_MAX_PAGES);
+      pagesToProcess = pagesToProcess.slice(0, OCR_MAX_PAGES);
       capped = true;
     }
 
@@ -443,21 +440,23 @@ export class PaddleOcrService {
     };
 
     // Retry transient worker error up to 1 time safely (Requirement 9)
+    const progress = (event: OcrProgressEvent) => onProgress?.({ ...event,
+      completedPages: reusedPages.size + event.completedPages, totalPages: uniquePages.length });
     let result: WorkerResult;
     try {
-      result = await this.runWorker(job, onProgress);
+      result = await this.runWorker(job, progress);
     } catch (firstErr: any) {
-      console.warn(`[PaddleOcrService] Initial worker attempt failed, retrying once:`, firstErr?.message);
+      console.warn('[PaddleOcrService] Initial worker attempt failed; retrying once.');
       this.shutdown();
-      result = await this.runWorker(job, onProgress);
+      result = await this.runWorker(job, progress);
     }
 
     if (result.error) {
       throw new Error(result.error);
     }
 
-    const pages = new Map<number, PaddlePageResult>();
-    let confSum = 0;
+    const pages = new Map(reusedPages);
+    let confSum = [...reusedPages.values()].reduce((sum, page) => sum + page.confidence, 0);
     const pagesForCache: CachedPageResult[] = [];
 
     for (const p of result.pages || []) {
@@ -492,7 +491,7 @@ export class PaddleOcrService {
         dpi,
         docHash,
         cachedAt: new Date().toISOString(),
-        pages: pagesForCache,
+        pages: [...(OcrCacheService.get(cacheKey)?.pages || []).filter(p => !pagesForCache.some(next => next.pageNumber === p.pageNumber)), ...pagesForCache],
       });
     }
 

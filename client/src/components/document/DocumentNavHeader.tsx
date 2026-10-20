@@ -1,4 +1,5 @@
 import React from 'react';
+import ApiService from '../../services/api.js';
 import { NavLink, Link, useParams } from 'react-router-dom';
 import {
   FileText,
@@ -85,15 +86,13 @@ export const DocumentNavHeader: React.FC<DocumentNavHeaderProps> = ({ document }
         </div>
 
         <div className="flex items-center gap-2">
-          <a
-            href={`/api/documents/${id}/download`}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={() => id && ApiService.openDocumentPage(id, 1).catch(err => alert(err.message))}
             className="btn btn-sm btn-primary"
           >
             <Download className="h-3.5 w-3.5" />
-            <span>Download PDF</span>
-          </a>
+            <span>Open PDF</span>
+          </button>
         </div>
       </div>
 

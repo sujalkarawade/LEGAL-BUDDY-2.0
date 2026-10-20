@@ -45,6 +45,21 @@ async function main() {
   assert(mixed.text.trim().length > 0, 'Mixed produced non-empty extracted text');
   assert(mixed.ocrResult.pages.length === mixed.pageCount, 'Per-page metadata preserved for every page');
 
+  // 2a. Retry one page while preserving the successful page OCR results.
+  console.log('\n--- 2a. Selective page retry ---');
+  const retryPage = mixed.ocrResult.pages[0].pageNumber;
+  const preserved = mixed.ocrResult.pages.filter((page) => page.pageNumber !== retryPage);
+  const selective = await PdfService.extractText(MIXED, undefined, {
+    forcePageNumbers: [retryPage],
+    preservedPages: preserved,
+    bypassCache: true,
+  });
+  assert(selective.ocrResult.pages.length === mixed.pageCount, 'Selective retry retains page metadata for the full document');
+  assert(
+    preserved.every((page) => selective.ocrResult.pages.find((item) => item.pageNumber === page.pageNumber)?.text === page.text),
+    'Selective retry reuses non-target page text without OCR changes'
+  );
+
   // 3. Empty scanned PDF -> graceful, flagged, no crash.
   console.log('\n--- 3. Empty scanned PDF (graceful handling) ---');
   try {

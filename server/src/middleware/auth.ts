@@ -1,7 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { z } from 'zod';
 import { JWT_SECRET } from '../config/index.js';
 import prisma from '../prisma/client.js';
+import { isResourceOwner } from '../services/document-access.service.js';
 
 export interface AuthenticatedUser {
   id: string;
@@ -73,7 +75,7 @@ export const requireDocumentOwnership = async (
     const documentId = req.params.id || req.params.documentId;
     const userId = req.user?.id;
 
-    if (!documentId) {
+    if (!z.string().uuid().safeParse(documentId).success) {
       res.status(400).json({ error: 'Document ID parameter is missing.' });
       return;
     }
@@ -93,8 +95,8 @@ export const requireDocumentOwnership = async (
       return;
     }
 
-    if (document.userId !== userId) {
-      res.status(403).json({ error: 'Access denied. You do not have permission to view or modify this document.' });
+    if (!isResourceOwner(document.userId, userId)) {
+      res.status(404).json({ error: 'Document not found.' });
       return;
     }
 

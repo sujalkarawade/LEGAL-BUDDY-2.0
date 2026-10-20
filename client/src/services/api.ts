@@ -54,6 +54,21 @@ class ApiService {
     return response.json();
   }
 
+  static async openDocumentPage(documentId: string, pageNumber: number): Promise<void> {
+    const tab = window.open('about:blank', '_blank');
+    if (tab) tab.opener = null;
+    try {
+      const response = await fetch(`${API_BASE}/documents/${encodeURIComponent(documentId)}/download`, {
+        headers: { Authorization: `Bearer ${this.getToken() || ''}` },
+      });
+      if (!response.ok) throw new Error('Unable to open the source document.');
+      const url = URL.createObjectURL(await response.blob());
+      if (tab) tab.location.href = `${url}#page=${pageNumber}`;
+      else throw new Error('Allow popups to view the source PDF.');
+      setTimeout(() => URL.revokeObjectURL(url), 300000);
+    } catch (error) { tab?.close(); throw error; }
+  }
+
   // Auth
   static async login(email: string, password: string):Promise<{ user: User; token: string }> {
     return this.request('/auth/login', {
@@ -161,16 +176,17 @@ class ApiService {
   static async verifyOcrAndAnalyze(
     documentId: string,
     pages: Array<{ pageNumber: number; text: string }>
-  ): Promise<{ message: string; document: DocumentRecord }> {
+  ): Promise<{ jobId: string; status: string; document: DocumentRecord }> {
     return this.request(`/documents/${documentId}/ocr-preview/verify`, {
       method: 'POST',
       body: JSON.stringify({ pages }),
     });
   }
 
-  static async reOcrDocument(documentId: string): Promise<{ message: string; document: DocumentRecord }> {
+  static async reOcrDocument(documentId: string, pageNumbers?: number[]): Promise<{ jobId: string; status: string }> {
     return this.request(`/documents/${documentId}/ocr-preview/re-ocr`, {
       method: 'POST',
+      body: JSON.stringify({ pageNumbers }),
     });
   }
 
@@ -224,6 +240,8 @@ class ApiService {
     citations: ChatCitation[];
     isDocumentGrounded: boolean;
     provider: string;
+    retrievalMode: 'semantic_hybrid' | 'keyword_fallback';
+    metrics: { retrievalLatencyMs: number; totalResponseTimeMs: number };
   }> {
     return this.request(`/documents/${documentId}/chat`, {
       method: 'POST',

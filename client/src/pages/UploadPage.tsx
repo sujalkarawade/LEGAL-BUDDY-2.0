@@ -91,31 +91,22 @@ export const UploadPage: React.FC = () => {
         const pollInterval = 600;
         let jobDone = false;
 
-        while (!jobDone) {
+        for (let attempt = 0; !jobDone && attempt < 1800; attempt++) {
           await new Promise((r) => setTimeout(r, pollInterval));
-          try {
-            const jobStatus = await ApiService.getJobStatus(response.jobId);
-            if (jobStatus.progress) {
-              const p = jobStatus.progress;
-              const pageInfo = p.totalPages > 1 ? ` (${p.completedPages}/${p.totalPages} pages - ${p.percent}%)` : '';
-              setProcessingStage(`${p.currentStage}${pageInfo}`);
-            }
-
-            if (jobStatus.status === 'COMPLETED') {
-              jobDone = true;
-              if (jobStatus.document) {
-                doc = jobStatus.document;
-              }
-            } else if (jobStatus.status === 'FAILED') {
-              throw new Error(jobStatus.error || 'Background OCR processing failed.');
-            }
-          } catch (pollErr: any) {
-            if (pollErr.message && pollErr.message.includes('Background OCR processing failed')) {
-              throw pollErr;
-            }
-            // Transient network retry while polling
+          const jobStatus = await ApiService.getJobStatus(response.jobId);
+          if (jobStatus.progress) {
+            const p = jobStatus.progress;
+            setProcessingStage(`${p.currentStage} (${p.completedPages}/${p.totalPages} pages; ${p.percent}%)`);
+          }
+          if (jobStatus.status === 'COMPLETED') {
+            jobDone = true;
+            if (jobStatus.document) doc = jobStatus.document;
+          } else if (jobStatus.status === 'FAILED') {
+            navigate(`/documents/${doc.id}/ocr-preview`);
+            return;
           }
         }
+        if (!jobDone) throw new Error('Processing continues in the background. Check the document list for progress.');
       }
 
       setProcessingStage('Preserving English & Marathi page boundaries and structuring contract chunks...');

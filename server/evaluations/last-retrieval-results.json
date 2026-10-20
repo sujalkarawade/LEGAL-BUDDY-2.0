@@ -1,0 +1,152 @@
+{
+  "executedAt": "2026-10-19T18:24:10.143Z",
+  "fixtureSha256": "8d080a98be7d915dd6dcb3a08191a0c77d9df170f428a99f78fa2641baee81db",
+  "mode": "keyword_fallback",
+  "data": "Synthetic text; Marathi cases do not execute OCR.",
+  "rows": [
+    {
+      "id": "explicit-payment",
+      "question": "What is the invoice payment period?",
+      "expectedEvidence": [
+        "Invoices are payable within thirty days"
+      ],
+      "expectedPages": [
+        2
+      ],
+      "expectedAnswer": "Payment is due within 30 days.",
+      "correctPassageRetrieved": true,
+      "correctPage": true,
+      "citationValidationPassed": true,
+      "generated": null,
+      "generatedAnswerAccuracy": "NOT MEASURED: expected answer is a validator fixture, not model output",
+      "retrievalMs": 10.36,
+      "totalMs": 14
+    },
+    {
+      "id": "long-document",
+      "question": "How long is the cure period after notice of breach?",
+      "expectedEvidence": [
+        "notice of breach and thirty days to cure"
+      ],
+      "expectedPages": [
+        18
+      ],
+      "expectedAnswer": "The agreement provides a 30-day cure period after notice.",
+      "correctPassageRetrieved": true,
+      "correctPage": true,
+      "citationValidationPassed": true,
+      "generated": null,
+      "generatedAnswerAccuracy": "NOT MEASURED: expected answer is a validator fixture, not model output",
+      "retrievalMs": 1.6,
+      "totalMs": 2.5
+    },
+    {
+      "id": "clause-number",
+      "question": "What does clause 7.2 say?",
+      "expectedEvidence": [
+        "7.2 Governing Law. This Agreement is governed by the laws of Maharashtra."
+      ],
+      "expectedPages": [
+        4
+      ],
+      "expectedAnswer": "Clause 7.2 selects Maharashtra law.",
+      "correctPassageRetrieved": true,
+      "correctPage": true,
+      "citationValidationPassed": true,
+      "generated": null,
+      "generatedAnswerAccuracy": "NOT MEASURED: expected answer is a validator fixture, not model output",
+      "retrievalMs": 0.43,
+      "totalMs": 0.6
+    },
+    {
+      "id": "date-and-amount",
+      "question": "What is the effective date and annual fee?",
+      "expectedEvidence": [
+        "effective 1 April 2026; annual fee INR 240,000"
+      ],
+      "expectedPages": [
+        1
+      ],
+      "expectedAnswer": "Effective 1 April 2026; annual fee INR 240,000.",
+      "correctPassageRetrieved": true,
+      "correctPage": true,
+      "citationValidationPassed": true,
+      "generated": null,
+      "generatedAnswerAccuracy": "NOT MEASURED: expected answer is a validator fixture, not model output",
+      "retrievalMs": 0.37,
+      "totalMs": 0.64
+    },
+    {
+      "id": "absent-answer",
+      "question": "Which court has exclusive jurisdiction?",
+      "expectedEvidence": [],
+      "expectedPages": [
+        null
+      ],
+      "expectedAnswer": "The retrieved contract text does not specify an exclusive court.",
+      "correctPassageRetrieved": true,
+      "correctPage": true,
+      "citationValidationPassed": true,
+      "generated": null,
+      "generatedAnswerAccuracy": "NOT MEASURED: expected answer is a validator fixture, not model output",
+      "retrievalMs": 0.35,
+      "totalMs": 0.43
+    },
+    {
+      "id": "conflicting-passages",
+      "question": "What is the termination notice period?",
+      "expectedEvidence": [
+        "Termination requires sixty days written notice",
+        "Termination requires thirty days written notice"
+      ],
+      "expectedPages": [
+        3,
+        11
+      ],
+      "expectedAnswer": "The document contains conflicting 60-day and 30-day notice terms; verify which controls.",
+      "correctPassageRetrieved": true,
+      "correctPage": true,
+      "citationValidationPassed": true,
+      "generated": null,
+      "generatedAnswerAccuracy": "NOT MEASURED: expected answer is a validator fixture, not model output",
+      "retrievalMs": 0.48,
+      "totalMs": 0.62
+    },
+    {
+      "id": "marathi-english-scan",
+      "question": "देय रक्कम किती आहे?",
+      "expectedEvidence": [
+        "रक्कम INR 50,000 payable within 15 days"
+      ],
+      "expectedPages": [
+        2
+      ],
+      "expectedAnswer": "INR 50,000 is payable within 15 days, subject to OCR verification.",
+      "correctPassageRetrieved": true,
+      "correctPage": true,
+      "citationValidationPassed": true,
+      "generated": null,
+      "generatedAnswerAccuracy": "NOT MEASURED: expected answer is a validator fixture, not model output",
+      "retrievalMs": 2.21,
+      "totalMs": 2.35
+    },
+    {
+      "id": "low-quality-ocr",
+      "question": "What is the penalty amount?",
+      "expectedEvidence": [
+        "OCR text: penalty amount unclear"
+      ],
+      "expectedPages": [
+        5
+      ],
+      "expectedAnswer": "The amount is unclear in OCR and must be checked against the original page.",
+      "correctPassageRetrieved": true,
+      "correctPage": true,
+      "citationValidationPassed": true,
+      "generated": null,
+      "generatedAnswerAccuracy": "NOT MEASURED: expected answer is a validator fixture, not model output",
+      "retrievalMs": 0.41,
+      "totalMs": 0.52
+    }
+  ]
+}

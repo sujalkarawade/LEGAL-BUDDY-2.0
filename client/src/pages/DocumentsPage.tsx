@@ -38,6 +38,8 @@ export const DocumentsPage: React.FC = () => {
 
   useEffect(() => {
     fetchDocuments();
+    const timer = setInterval(fetchDocuments, 5000);
+    return () => clearInterval(timer);
   }, []);
 
   const handleDelete = async (id: string) => {
@@ -56,7 +58,7 @@ export const DocumentsPage: React.FC = () => {
       (doc.summary?.contractType && doc.summary.contractType.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (doc.summary?.parties && doc.summary.parties.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    const matchesStatus = statusFilter === 'ALL' || doc.status === statusFilter;
+    const matchesStatus = statusFilter === 'ALL' || (statusFilter === 'COMPLETED' ? ['READY', 'KEYWORD_READY'].includes(doc.ragStatus || '') : doc.status === statusFilter);
 
     return matchesSearch && matchesStatus;
   });
@@ -191,19 +193,19 @@ export const DocumentsPage: React.FC = () => {
                           <span className="h-2 w-2 rounded-full bg-[#b7950b]"></span>
                           OCR Review
                         </span>
-                      ) : doc.status === 'COMPLETED' ? (
+                      ) : ['READY', 'KEYWORD_READY'].includes(doc.ragStatus || '') ? (
                         <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase text-[#27ae60] font-mono">
                           <span className="h-2 w-2 rounded-full bg-[#27ae60]"></span>
-                          Completed
+                          {doc.ragStatus === 'READY' ? 'Ready' : 'Keyword ready'}
                         </span>
                       ) : doc.status === 'PROCESSING' ? (
                         <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase text-[#d35400] font-mono animate-pulse">
                           <span className="h-2 w-2 rounded-full bg-[#d35400]"></span>
-                          Processing
+                          {doc.ragStatus === 'INDEXING' ? 'Indexing' : 'Extracting'}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase text-[#c0392b] font-mono">
-                          Failed
+                          {doc.ragStatus === 'UPLOADED' ? 'Index required' : 'Failed'}
                         </span>
                       )}
                     </td>
@@ -257,15 +259,13 @@ export const DocumentsPage: React.FC = () => {
 
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <a
-                          href={`/api/documents/${doc.id}/download`}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <button
+                          onClick={() => ApiService.openDocumentPage(doc.id, 1).catch(err => alert(err.message))}
                           title="Download Original PDF"
                           className="border border-[#0a0a0a] bg-white p-1.5 text-[#0a0a0a] hover:bg-[#0a0a0a] hover:text-white transition-colors"
                         >
                           <Download className="h-3.5 w-3.5" />
-                        </a>
+                        </button>
                         <button
                           onClick={() => setDeleteConfirmId(doc.id)}
                           title="Delete Contract"

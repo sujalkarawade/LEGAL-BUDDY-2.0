@@ -221,19 +221,19 @@ export const DashboardPage: React.FC = () => {
                         </span>
                       </td>
                       <td className="py-3.5 px-3">
-                        {doc.status === 'COMPLETED' ? (
+                        {doc.status === 'COMPLETED' && ['READY', 'KEYWORD_READY'].includes(doc.ragStatus || '') ? (
                           <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase text-[#27ae60] font-mono">
                             <span className="h-2 w-2 rounded-full bg-[#27ae60]"></span>
-                            Ready
+                            {doc.ragStatus === 'KEYWORD_READY' ? 'Keyword ready' : 'Ready'}
                           </span>
                         ) : doc.status === 'PROCESSING' ? (
                           <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase text-[#d35400] font-mono animate-pulse">
                             <span className="h-2 w-2 rounded-full bg-[#d35400]"></span>
-                            Parsing...
+                            {doc.ragStatus === 'INDEXING' ? 'Indexing...' : 'Extracting...'}
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase text-[#c0392b] font-mono">
-                            Failed
+                            {doc.ragStatus === 'REVIEW_REQUIRED' ? 'Review required' : doc.status === 'FAILED' ? 'Failed' : 'Index required'}
                           </span>
                         )}
                       </td>

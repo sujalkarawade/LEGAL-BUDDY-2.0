@@ -10,7 +10,12 @@
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "seed": "tsx src/prisma/seed.ts",
-    "test:ocr": "tsx scripts/test-ocr.ts"
+    "test:ocr": "tsx scripts/test-ocr.ts",
+    "test:rag": "tsx --test src/services/rag.service.test.ts src/services/embedding.test.ts scripts/ai-grounding.test.ts scripts/offline-mode.test.ts scripts/ocr-cache.test.ts scripts/error-handler.test.ts scripts/config-security.test.ts",
+    "eval:rag": "tsx scripts/evaluate-rag.ts",
+    "test:rag:integration": "tsx --test scripts/rag-integration.test.ts",
+    "test:api": "tsx scripts/test-api.ts",
+    "prisma:migrate": "prisma migrate deploy"
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",

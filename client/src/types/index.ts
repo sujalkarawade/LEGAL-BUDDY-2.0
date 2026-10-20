@@ -113,6 +113,7 @@ export interface DocumentOcrResult {
 }
 
 export interface DocumentRecord {
+  ragStatus?: string;
   id: string;
   userId: string;
   originalName: string;
@@ -139,9 +140,14 @@ export interface DocumentRecord {
 }
 
 export interface ChatCitation {
+  verified?: boolean;
   excerpt: string;
   pageNumber: number;
   score: number;
+  chunkId?: string;
+  documentName?: string;
+  extractionMethod?: string;
+  lowConfidence?: boolean;
 }
 
 export interface ChatMessage {

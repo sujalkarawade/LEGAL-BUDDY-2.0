@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import {
   MessageSquareQuote,
   Send,
@@ -26,6 +26,8 @@ export const DocumentChatPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [activeCitation, setActiveCitation] = useState<ChatCitation | null>(null);
+  const currentDocumentId = useRef(id);
+  currentDocumentId.current = id;
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const fetchChat = async () => {
@@ -35,6 +37,7 @@ export const DocumentChatPage: React.FC = () => {
         ApiService.getDocumentById(id),
         ApiService.getChat(id),
       ]);
+      if (currentDocumentId.current !== id) return;
       setDocument(docRes.document);
       setMessages(chatRes.conversation.messages || []);
     } catch (err) {
@@ -45,6 +48,11 @@ export const DocumentChatPage: React.FC = () => {
   };
 
   useEffect(() => {
+    setMessages([]);
+    setDocument(null);
+    setActiveCitation(null);
+    setInputQuestion('');
+    setIsLoading(true);
     fetchChat();
   }, [id]);
 
@@ -54,7 +62,7 @@ export const DocumentChatPage: React.FC = () => {
 
   const handleSendMessage = async (questionText?: string) => {
     const q = questionText || inputQuestion;
-    if (!q.trim() || !id || isSending) return;
+    if (!q.trim() || !id || isSending || !['READY', 'KEYWORD_READY'].includes(document?.ragStatus || '')) return;
 
     setInputQuestion('');
     setIsSending(true);
@@ -71,6 +79,7 @@ export const DocumentChatPage: React.FC = () => {
 
     try {
       const res = await ApiService.sendChatMessage(id, q.trim());
+      if (currentDocumentId.current !== id) return;
       setMessages((prev) => [...prev.filter((m) => m.id !== tempUserMsg.id), tempUserMsg, res.message]);
     } catch (err: any) {
       alert(`Chat error: ${err.message}`);
@@ -103,7 +112,8 @@ export const DocumentChatPage: React.FC = () => {
   const parseCitations = (citationsStr?: string | null): ChatCitation[] => {
     if (!citationsStr) return [];
     try {
-      return JSON.parse(citationsStr);
+      const parsed = JSON.parse(citationsStr);
+      return Array.isArray(parsed) ? parsed.filter(c => c.verified === true && c.chunkId && Number.isInteger(c.pageNumber)) : [];
     } catch (e) {
       return [];
     }
@@ -112,6 +122,9 @@ export const DocumentChatPage: React.FC = () => {
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-fadeUp">
       <DocumentNavHeader document={document} />
+      {!['READY', 'KEYWORD_READY'].includes(document?.ragStatus || '') && <p className="border p-3 text-sm">
+        Document chat requires completed extraction and indexing. <Link className="underline" to={`/documents/${id}/ocr-preview`}>Review pages or retry processing</Link>.
+      </p>}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Chat Interface (2 cols) */}
@@ -129,11 +142,11 @@ export const DocumentChatPage: React.FC = () => {
                     Grounded RAG
                   </span>
                   <span className="border border-[#27ae60] bg-[#27ae60]/20 text-[#2ecc71] px-1.5 py-0.2 text-[9px] font-black uppercase font-mono">
-                    Neural AI (Llama 3.3 70B)
+                    {document?.ragStatus === 'READY' ? 'Document indexed' : document?.ragStatus === 'KEYWORD_READY' ? 'Keyword search only' : 'Processing or review required'}
                   </span>
                 </h3>
                 <p className="text-[10px] text-white/60 font-mono font-semibold uppercase">
-                  Strictly grounded in {document?.originalName || 'this agreement'}
+                  {document?.originalName || 'this agreement'} · page references come from extracted document metadata
                 </p>
               </div>
             </div>
@@ -159,7 +172,7 @@ export const DocumentChatPage: React.FC = () => {
                 <div>
                   <h4 className="text-sm font-black uppercase tracking-wider text-[#0a0a0a]">Ask questions about this contract</h4>
                   <p className="text-xs text-gray-600 mt-1 max-w-sm leading-relaxed font-medium">
-                    Legal Buddy will extract operative clauses, cite exact source pages, and flag any provisions not present in the document.
+                    Ask about the extracted contract. Answers show verified source excerpts when available and explain when retrieved evidence is insufficient.
                   </p>
                 </div>
 
@@ -209,7 +222,7 @@ export const DocumentChatPage: React.FC = () => {
                         <div className="mt-3 pt-3 border-t-2 border-[#0a0a0a] space-y-2">
                           <p className="text-[10px] font-black uppercase text-gray-500 font-mono flex items-center gap-1.5">
                             <BookOpen className="h-3 w-3 text-[#0a0a0a]" />
-                            <span>Supporting Evidence Citations:</span>
+                            <span>Source excerpts:</span>
                           </p>
                           <div className="flex flex-wrap gap-2">
                             {citations.map((cite, cIdx) => (
@@ -220,7 +233,7 @@ export const DocumentChatPage: React.FC = () => {
                               >
                                 <span>PAGE {cite.pageNumber}</span>
                                 <span className="opacity-70">
-                                  ({Math.round(cite.score * 100)}% MATCH)
+                                  {cite.lowConfidence ? 'Verify OCR' : 'Source verified'}
                                 </span>
                               </button>
                             ))}
@@ -267,7 +280,7 @@ export const DocumentChatPage: React.FC = () => {
                 value={inputQuestion}
                 onChange={(e) => setInputQuestion(e.target.value)}
                 placeholder="Ask any question about this contract's clauses or obligations..."
-                disabled={isSending}
+                disabled={isSending || isLoading || !['READY', 'KEYWORD_READY'].includes(document?.ragStatus || '')}
                 className="flex-1 px-4 py-3 text-xs font-medium text-[#0a0a0a] placeholder-gray-400 focus:outline-none bg-white"
               />
               <button
@@ -302,11 +315,23 @@ export const DocumentChatPage: React.FC = () => {
                 <p className="text-[10px] text-gray-500 uppercase font-black font-mono">
                   Retrieved Passage Evidence:
                 </p>
+                <Link to={`/documents/${id}/ocr-preview?page=${activeCitation.pageNumber}`} className="inline-flex items-center gap-1 text-[10px] font-bold underline">
+                  Open source document and OCR pages <ExternalLink className="h-3 w-3" />
+                </Link>
+                <button className="block text-[10px] font-bold underline" onClick={() => {
+                  if (id) ApiService.openDocumentPage(id, activeCitation.pageNumber).catch(err => alert(err.message));
+                }}>Open original PDF at this page</button>
+                {activeCitation.lowConfidence && (
+                  <p className="border border-amber-600 bg-amber-50 p-2 text-[10px] font-bold text-amber-900">
+                    Low-confidence OCR: verify this passage against the original scan.
+                  </p>
+                )}
+                <p className="text-[10px] text-gray-500 font-mono">{activeCitation.documentName || document?.originalName} · {activeCitation.extractionMethod || 'extracted text'} · page {activeCitation.pageNumber}</p>
                 <div className="border-2 border-[#0a0a0a] bg-[#f9f9f9] p-3 font-mono text-[11px] text-[#0a0a0a] leading-relaxed">
                   "{activeCitation.excerpt}"
                 </div>
                 <p className="text-[10px] font-mono font-bold text-gray-600 uppercase">
-                  Relevance Match: {Math.round(activeCitation.score * 100)}%
+                  Excerpt and page verified against extracted text
                 </p>
               </div>
             ) : (
@@ -323,7 +348,7 @@ export const DocumentChatPage: React.FC = () => {
               <button
                 key={idx}
                 onClick={() => handleSendMessage(prompt)}
-                disabled={isSending}
+                disabled={isSending || isLoading || !['READY', 'KEYWORD_READY'].includes(document?.ragStatus || '')}
                 className="w-full text-left border-2 border-gray-200 bg-white hover:border-[#0a0a0a] hover:bg-[#0a0a0a] hover:text-white p-2 text-[11px] font-bold transition-all truncate block cursor-pointer"
               >
                 {prompt}
@@ -338,7 +363,7 @@ export const DocumentChatPage: React.FC = () => {
               <span>Document-Grounded Assurance</span>
             </div>
             <p className="leading-relaxed font-medium">
-              Legal Buddy does not hallucinate contract provisions. If an inquiry cannot be substantiated by the uploaded text, the assistant explicitly states that the clause was not found.
+              Generated explanations can contain errors. Source excerpts and page references are checked against extracted text; verify uncertain OCR against the scan. Insufficient retrieval does not prove a clause is absent.
             </p>
           </div>
         </div>
