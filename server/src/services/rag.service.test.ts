@@ -7,7 +7,7 @@ import { isResourceOwner } from './document-access.service.js';
 describe('RAG retrieval and authorization', () => {
   const chunk = (id: string, pageNumber: number, content: string): RagChunk => ({
     id, documentId: 'doc-a', chunkIndex: pageNumber, pageNumber, content,
-    extractionMethod: 'selectable', clauseHeading: null, embedding: null, embeddingModel: null,
+    extractionMethod: 'selectable', clauseHeading: null,
   });
 
   it('retrieves matching clauses and preserves page metadata without padding unrelated text', async () => {
@@ -40,6 +40,11 @@ describe('RAG retrieval and authorization', () => {
     assert.equal(isResourceOwner('user-a', ''), false);
   });
 
+  it('retrieves Marathi words with combining marks intact', async () => {
+    const results = await RagService.retrieve('देय रक्कम किती आहे?', [chunk('marathi', 2, 'देय रक्कम INR 50,000 आहे.')]);
+    assert.equal(results[0]?.id, 'marathi');
+  });
+
   it('keeps page boundaries and overlap when chunking long page-aware text', () => {
     const chunks = PdfService.chunkPages([
       { pageNumber: 3, extractionType: 'paddle_ocr', text: `${'Payment obligations begin on execution. '.repeat(55)}\n\nGoverning law is Maharashtra.` },
@@ -51,14 +56,13 @@ describe('RAG retrieval and authorization', () => {
     assert.ok(chunks.some((item) => item.pageNumber === 4));
   });
 });
-import { mock } from 'node:test';
 import { validateGroundedAnswer } from './grounded-answer.js';
 import { RAG_CHUNK_SIZE } from '../config/index.js';
 
 describe('Source and retrieval regressions', () => {
   const source: RagChunk = { id: 'verified', documentId: 'doc-a', chunkIndex: 0, pageNumber: 9,
     content: '7.2 Payment. The annual fee is INR 240,000 due on 1 April 2026.',
-    extractionMethod: 'paddle_ocr', clauseHeading: '7.2 Payment', embedding: null, embeddingModel: null };
+    extractionMethod: 'paddle_ocr', clauseHeading: '7.2 Payment' };
   const response = (sources: unknown, answer = 'The annual fee is INR 240,000.') => JSON.stringify({ answer, insufficientEvidence: false, sources });
 
   it('preserves every word, decimal, clause identifier and Marathi mark in long paragraphs', () => {
@@ -107,28 +111,6 @@ describe('Source and retrieval regressions', () => {
     assert.equal(result.isDocumentGrounded, false);
     assert.deepEqual(result.citations, []);
     assert.match(result.answer, /insufficient/);
-  });
-  it('uses compatible semantic vectors, and ignores malformed or incompatible vectors', async () => {
-    const vector = Array.from({ length: 768 }, (_, i) => i === 0 ? 1 : 0);
-    const embed = mock.method(RagService, 'embed', async () => vector);
-    try {
-      const matches = await RagService.retrieve('unrelated synonym', [
-        { ...source, embedding: JSON.stringify(vector), embeddingModel: RagService.embeddingModel },
-        { ...source, id: 'old', embedding: JSON.stringify(vector), embeddingModel: 'obsolete' },
-        { ...source, id: 'broken', embedding: '[1,2]', embeddingModel: RagService.embeddingModel },
-      ]);
-      assert.deepEqual(matches.map(c => c.id), ['verified']);
-      assert.equal(matches[0].semanticMatched, true);
-      assert.equal(embed.mock.callCount(), 1);
-    } finally { embed.mock.restore(); }
-  });
-  it('embedding outages degrade to keyword retrieval without fake semantic scores', async () => {
-    const embed = mock.method(RagService, 'embed', async () => { throw new Error('offline'); });
-    try {
-      const matches = await RagService.retrieve('payment', [{ ...source,
-        embedding: JSON.stringify(Array(768).fill(1)), embeddingModel: RagService.embeddingModel }]);
-      assert.equal(matches[0].semanticMatched, false);
-    } finally { embed.mock.restore(); }
   });
   it('retrieves Marathi words with combining marks intact', async () => {
     const results = await RagService.retrieve('देय रक्कम किती आहे?', [{ ...source, content: 'देय रक्कम INR 50,000 आहे.' }]);

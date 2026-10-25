@@ -1,0 +1,2658 @@
+{
+  "executedAt": "2026-10-21T15:42:56.872Z",
+  "embedding": {
+    "signature": "local-st:642f27105465ad97460fdc816ef6d38a29f18762848a73e512990c740a9515c7:384:window-mean-v1",
+    "dimensions": 384
+  },
+  "coldStartMs": 19373.622,
+  "indexingMs": 1680.8489,
+  "chunks": 97,
+  "fixtureSha256": "f45eb1f8f97d47f8f1a132cffd28e3a33b59d478570d012ff577a6c9f3bd9e9f",
+  "scope": "Synthetic corpus and actual selectable NDA extraction. In-memory ranking/query encoding; no DB/network/LLM in latency. Cosine-only baseline is reconstructed because the starting tree was keyword-only. No legal answer accuracy or OCR recognition accuracy measured.",
+  "summary": {
+    "keyword": {
+      "supportedCases": 15,
+      "top1Hits": 13,
+      "meanRecallAt3": 0.9333,
+      "meanReciprocalRankAt3": 0.9,
+      "unsupportedCandidates": [
+        0
+      ],
+      "scoringP50Ms": 0.6384,
+      "scoringP95Ms": 5.0768,
+      "warmRetrievalP50Ms": 0.1398,
+      "warmRetrievalP95Ms": 0.6534
+    },
+    "semantic": {
+      "supportedCases": 15,
+      "top1Hits": 13,
+      "meanRecallAt3": 0.9333,
+      "meanReciprocalRankAt3": 0.9,
+      "unsupportedCandidates": [
+        3
+      ],
+      "scoringP50Ms": 0.6466,
+      "scoringP95Ms": 5.1426,
+      "warmRetrievalP50Ms": 12.1431,
+      "warmRetrievalP95Ms": 19.8203
+    },
+    "semantic_reranked": {
+      "supportedCases": 15,
+      "top1Hits": 14,
+      "meanRecallAt3": 1,
+      "meanReciprocalRankAt3": 0.9667,
+      "unsupportedCandidates": [
+        3
+      ],
+      "scoringP50Ms": 0.8003,
+      "scoringP95Ms": 5.4465,
+      "warmRetrievalP50Ms": 12.2985,
+      "warmRetrievalP95Ms": 17.1814
+    },
+    "hybrid": {
+      "supportedCases": 15,
+      "top1Hits": 14,
+      "meanRecallAt3": 1,
+      "meanReciprocalRankAt3": 0.9667,
+      "unsupportedCandidates": [
+        3
+      ],
+      "scoringP50Ms": 0.6688,
+      "scoringP95Ms": 4.7772,
+      "warmRetrievalP50Ms": 12.6093,
+      "warmRetrievalP95Ms": 16.8587
+    },
+    "hybrid_reranked": {
+      "supportedCases": 15,
+      "top1Hits": 14,
+      "meanRecallAt3": 1,
+      "meanReciprocalRankAt3": 0.9667,
+      "unsupportedCandidates": [
+        3
+      ],
+      "scoringP50Ms": 0.8002,
+      "scoringP95Ms": 5.2451,
+      "warmRetrievalP50Ms": 12.1354,
+      "warmRetrievalP95Ms": 16.6449
+    }
+  },
+  "rows": [
+    {
+      "id": "exact-clause",
+      "question": "What does section 7.2 say?",
+      "documentIds": [
+        "commercial"
+      ],
+      "variants": {
+        "keyword": {
+          "topIds": [
+            "law72"
+          ],
+          "expectedIds": [
+            "law72"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            1.5502999999989697,
+            2.1265999999995984,
+            0.7250000000021828,
+            0.6627999999982421,
+            0.6494999999995343,
+            0.639500000001135,
+            0.6394999999974971,
+            0.6440000000002328,
+            0.6103000000002794,
+            0.6625999999996566
+          ],
+          "warmRetrievalSamplesMs": [
+            0.36089999999967404,
+            0.1548000000002503,
+            0.11990000000150758
+          ]
+        },
+        "semantic": {
+          "topIds": [
+            "law72",
+            "effective",
+            "indemnity"
+          ],
+          "expectedIds": [
+            "law72"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.6643000000003667,
+            0.6573999999964144,
+            0.6520000000018626,
+            0.6760000000031141,
+            0.7135999999991327,
+            1.255699999997887,
+            0.9651999999987311,
+            0.686600000000908,
+            0.6633999999976368,
+            0.6717000000026019
+          ],
+          "warmRetrievalSamplesMs": [
+            16.25079999999798,
+            13.630300000000716,
+            10.648600000000442
+          ]
+        },
+        "semantic_reranked": {
+          "topIds": [
+            "law72",
+            "effective",
+            "indemnity"
+          ],
+          "expectedIds": [
+            "law72"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.8205000000016298,
+            0.8263000000006286,
+            0.8803999999981897,
+            0.7890999999981432,
+            0.8215999999993073,
+            0.8016999999999825,
+            0.8002999999989697,
+            0.8680000000022119,
+            0.9074000000000524,
+            0.9675999999999476
+          ],
+          "warmRetrievalSamplesMs": [
+            13.448499999998603,
+            13.444100000000617,
+            11.051500000001397
+          ]
+        },
+        "hybrid": {
+          "topIds": [
+            "law72",
+            "effective",
+            "indemnity"
+          ],
+          "expectedIds": [
+            "law72"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.7657999999973981,
+            0.7556000000004133,
+            0.730200000001787,
+            0.7423999999991793,
+            0.7353000000002794,
+            0.7592999999978929,
+            0.7302999999992608,
+            0.7305999999989581,
+            0.7436000000016065,
+            0.7474000000001979
+          ],
+          "warmRetrievalSamplesMs": [
+            13.369500000000698,
+            13.34860000000117,
+            10.748400000000402
+          ]
+        },
+        "hybrid_reranked": {
+          "topIds": [
+            "law72",
+            "effective",
+            "indemnity"
+          ],
+          "expectedIds": [
+            "law72"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.8565999999991618,
+            0.8526000000019849,
+            0.8413000000000466,
+            0.8233000000000175,
+            0.8401999999987311,
+            0.8239000000030501,
+            0.8636000000005879,
+            0.827000000001135,
+            0.8363000000026659,
+            0.8236999999971886
+          ],
+          "warmRetrievalSamplesMs": [
+            15.07390000000305,
+            14.221700000001874,
+            11.068599999998696
+          ]
+        }
+      }
+    },
+    {
+      "id": "exact-date",
+      "question": "What becomes effective on 2026-04-01?",
+      "documentIds": [
+        "commercial"
+      ],
+      "variants": {
+        "keyword": {
+          "topIds": [
+            "effective"
+          ],
+          "expectedIds": [
+            "effective"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.6951000000008207,
+            0.6507000000019616,
+            0.634699999998702,
+            0.6245000000017171,
+            0.6442999999999302,
+            0.6363000000019383,
+            0.6631999999990512,
+            0.6824000000015076,
+            0.6671999999998661,
+            0.6911000000000058
+          ],
+          "warmRetrievalSamplesMs": [
+            0.16929999999774736,
+            0.12099999999918509,
+            0.1316999999980908
+          ]
+        },
+        "semantic": {
+          "topIds": [
+            "effective",
+            "otherdate",
+            "insurance"
+          ],
+          "expectedIds": [
+            "effective"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.6844999999993888,
+            0.6824999999989814,
+            1.1046999999998661,
+            0.7239000000008673,
+            0.7089000000014494,
+            0.6915999999982887,
+            0.6909000000014203,
+            0.7219000000004598,
+            0.7181000000018685,
+            0.6921000000002095
+          ],
+          "warmRetrievalSamplesMs": [
+            12.041700000001583,
+            11.657100000000355,
+            14.108899999999267
+          ]
+        },
+        "semantic_reranked": {
+          "topIds": [
+            "effective",
+            "otherdate",
+            "insurance"
+          ],
+          "expectedIds": [
+            "effective"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.9228000000002794,
+            0.9932999999982712,
+            1.5302000000010594,
+            0.8823999999985972,
+            0.8660000000018044,
+            0.9951999999975669,
+            0.9124999999985448,
+            0.9228000000002794,
+            0.9559000000008382,
+            0.9264000000002852
+          ],
+          "warmRetrievalSamplesMs": [
+            11.688399999999092,
+            11.903699999998935,
+            14.746399999999994
+          ]
+        },
+        "hybrid": {
+          "topIds": [
+            "effective",
+            "otherdate",
+            "insurance"
+          ],
+          "expectedIds": [
+            "effective"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.789600000000064,
+            1.330999999998312,
+            1.4447000000000116,
+            1.4222999999983585,
+            1.577900000000227,
+            0.8307999999997264,
+            0.8035000000018044,
+            0.8269000000000233,
+            1.7294000000001688,
+            1.2193000000006577
+          ],
+          "warmRetrievalSamplesMs": [
+            11.831699999998818,
+            11.671000000002095,
+            14.6903999999995
+          ]
+        },
+        "hybrid_reranked": {
+          "topIds": [
+            "effective",
+            "otherdate",
+            "insurance"
+          ],
+          "expectedIds": [
+            "effective"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            1.4828999999990629,
+            1.3388000000013562,
+            1.3384000000005472,
+            1.4284999999981665,
+            1.356999999999971,
+            1.3882999999987078,
+            0.8352999999988242,
+            1.0743000000002212,
+            1.1110000000007858,
+            1.1034999999974389
+          ],
+          "warmRetrievalSamplesMs": [
+            11.979800000000978,
+            13.312399999998888,
+            14.376500000002125
+          ]
+        }
+      }
+    },
+    {
+      "id": "exact-amount",
+      "question": "What is the annual fee INR 240000?",
+      "documentIds": [
+        "commercial"
+      ],
+      "variants": {
+        "keyword": {
+          "topIds": [
+            "effective",
+            "otherdate",
+            "insurance"
+          ],
+          "expectedIds": [
+            "effective"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.6664000000018859,
+            0.6190999999998894,
+            0.6585000000013679,
+            0.646100000001752,
+            0.5949000000000524,
+            0.6739999999990687,
+            0.6159999999981665,
+            0.6605999999992491,
+            0.6454000000012456,
+            0.613099999998667
+          ],
+          "warmRetrievalSamplesMs": [
+            0.12899999999717693,
+            0.19640000000072177,
+            0.1742000000012922
+          ]
+        },
+        "semantic": {
+          "topIds": [
+            "effective",
+            "otherdate",
+            "insurance"
+          ],
+          "expectedIds": [
+            "effective"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.6550999999999476,
+            0.6180999999996857,
+            0.6297000000013213,
+            0.6087999999981548,
+            0.6615000000019791,
+            0.6378000000004249,
+            0.603899999998248,
+            0.6190999999998894,
+            0.596399999998539,
+            0.6298999999999069
+          ],
+          "warmRetrievalSamplesMs": [
+            14.611299999996845,
+            11.982499999998254,
+            14.3791999999994
+          ]
+        },
+        "semantic_reranked": {
+          "topIds": [
+            "effective",
+            "otherdate",
+            "insurance"
+          ],
+          "expectedIds": [
+            "effective"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            1.148300000000745,
+            0.7624999999970896,
+            0.7595000000001164,
+            0.7600999999995111,
+            0.7651000000005297,
+            0.7612000000008265,
+            0.7548999999999069,
+            0.9248000000006869,
+            1.0936000000001513,
+            0.8170000000027358
+          ],
+          "warmRetrievalSamplesMs": [
+            14.551800000001094,
+            14.854200000001583,
+            13.22859999999855
+          ]
+        },
+        "hybrid": {
+          "topIds": [
+            "effective",
+            "otherdate",
+            "insurance"
+          ],
+          "expectedIds": [
+            "effective"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.6612999999997555,
+            0.6591000000007625,
+            0.6519999999982247,
+            0.6776000000027125,
+            0.6723999999994703,
+            0.6634999999987485,
+            0.6905000000006112,
+            0.702000000001135,
+            0.6628999999993539,
+            0.6876000000011118
+          ],
+          "warmRetrievalSamplesMs": [
+            14.056300000000192,
+            14.238900000000285,
+            11.983099999997648
+          ]
+        },
+        "hybrid_reranked": {
+          "topIds": [
+            "effective",
+            "otherdate",
+            "insurance"
+          ],
+          "expectedIds": [
+            "effective"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.8064999999987776,
+            0.8201000000008207,
+            0.8186999999998079,
+            0.8228999999992084,
+            1.0892999999996391,
+            0.8002000000014959,
+            0.8129000000008091,
+            0.7945999999974447,
+            0.8051999999988766,
+            0.7914999999993597
+          ],
+          "warmRetrievalSamplesMs": [
+            11.795200000000477,
+            12.043399999998655,
+            12.07549999999901
+          ]
+        }
+      }
+    },
+    {
+      "id": "exact-party",
+      "question": "What must \"Acme Holdings\" deliver?",
+      "documentIds": [
+        "commercial"
+      ],
+      "variants": {
+        "keyword": {
+          "topIds": [
+            "parties",
+            "force"
+          ],
+          "expectedIds": [
+            "parties"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.6618999999991502,
+            0.6804000000011001,
+            0.6257000000005064,
+            0.6192000000010012,
+            0.7684000000008382,
+            1.299699999999575,
+            0.6399000000019441,
+            0.632499999999709,
+            0.6447000000007392,
+            1.1130000000011933
+          ],
+          "warmRetrievalSamplesMs": [
+            0.11439999999856809,
+            0.15239999999903375,
+            0.12299999999959255
+          ]
+        },
+        "semantic": {
+          "topIds": [
+            "parties",
+            "insurance",
+            "indemnity"
+          ],
+          "expectedIds": [
+            "parties"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            1.1602999999995518,
+            1.1906999999991967,
+            1.176900000002206,
+            1.2835999999988417,
+            0.6033000000024913,
+            0.6002999999982421,
+            0.5654000000031374,
+            0.5830999999998312,
+            0.5632000000005064,
+            0.6127000000014959
+          ],
+          "warmRetrievalSamplesMs": [
+            13.705699999998615,
+            13.823599999999715,
+            13.815800000000309
+          ]
+        },
+        "semantic_reranked": {
+          "topIds": [
+            "parties",
+            "force",
+            "insurance"
+          ],
+          "expectedIds": [
+            "parties"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.747800000001007,
+            0.7091999999975087,
+            0.7079000000012456,
+            0.7429999999985739,
+            0.7393999999985681,
+            0.7109000000018568,
+            0.7489999999997963,
+            0.7226000000009662,
+            0.9470000000001164,
+            1.111400000001595
+          ],
+          "warmRetrievalSamplesMs": [
+            13.681900000003225,
+            17.696500000001834,
+            11.551199999998062
+          ]
+        },
+        "hybrid": {
+          "topIds": [
+            "parties",
+            "force",
+            "insurance"
+          ],
+          "expectedIds": [
+            "parties"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.5966000000007625,
+            0.5948000000025786,
+            0.6178999999974621,
+            0.6165000000000873,
+            0.6316999999980908,
+            5.214199999998527,
+            0.9144000000014785,
+            0.7765999999974156,
+            0.5784999999996217,
+            0.576600000000326
+          ],
+          "warmRetrievalSamplesMs": [
+            13.656400000003487,
+            14.719600000000355,
+            11.367600000001403
+          ]
+        },
+        "hybrid_reranked": {
+          "topIds": [
+            "parties",
+            "force",
+            "insurance"
+          ],
+          "expectedIds": [
+            "parties"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.880300000000716,
+            0.8430000000007567,
+            0.74120000000039,
+            0.7316999999966356,
+            0.7484999999978754,
+            0.7053999999989173,
+            0.71389999999883,
+            0.7217999999993481,
+            0.6834000000017113,
+            0.7115999999987253
+          ],
+          "warmRetrievalSamplesMs": [
+            13.918600000000879,
+            11.157100000000355,
+            12.372699999999895
+          ]
+        }
+      }
+    },
+    {
+      "id": "exact-legal-term",
+      "question": "Explain force majeure",
+      "documentIds": [
+        "commercial"
+      ],
+      "variants": {
+        "keyword": {
+          "topIds": [
+            "force"
+          ],
+          "expectedIds": [
+            "force"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.8583999999973457,
+            0.8307999999997264,
+            0.8423999999977241,
+            0.8307999999997264,
+            0.8065999999998894,
+            0.8394000000007509,
+            0.8267999999989115,
+            0.8585999999995693,
+            0.8688000000001921,
+            0.8833000000013271
+          ],
+          "warmRetrievalSamplesMs": [
+            0.15930000000298605,
+            0.10629999999946449,
+            0.11269999999785796
+          ]
+        },
+        "semantic": {
+          "topIds": [
+            "law72",
+            "law720",
+            "indemnity"
+          ],
+          "expectedIds": [
+            "force"
+          ],
+          "top1Hit": false,
+          "recallAt3": 0,
+          "reciprocalRankAt3": 0,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.9031000000031781,
+            0.906699999999546,
+            0.9036999999989348,
+            0.9508999999998196,
+            0.9201000000030035,
+            0.9318999999995867,
+            0.9209000000009837,
+            0.9240000000027067,
+            0.9277000000001863,
+            1.1118999999998778
+          ],
+          "warmRetrievalSamplesMs": [
+            11.698599999999715,
+            11.165200000003097,
+            13.459499999997206
+          ]
+        },
+        "semantic_reranked": {
+          "topIds": [
+            "force",
+            "law72",
+            "law720"
+          ],
+          "expectedIds": [
+            "force"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            1.1533000000017637,
+            1.1075000000018917,
+            1.1153999999987718,
+            1.07220000000234,
+            0.8024000000004889,
+            1.223999999998341,
+            1.0777999999991152,
+            1.100800000000163,
+            1.116199999996752,
+            1.1260999999976775
+          ],
+          "warmRetrievalSamplesMs": [
+            11.173299999998562,
+            11.348700000002282,
+            13.31840000000011
+          ]
+        },
+        "hybrid": {
+          "topIds": [
+            "force",
+            "law72",
+            "law720"
+          ],
+          "expectedIds": [
+            "force"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            1.3176000000021304,
+            0.9621000000006461,
+            0.9455000000016298,
+            0.950700000001234,
+            0.9438999999983935,
+            0.949400000001333,
+            0.9436000000023341,
+            0.9412000000011176,
+            0.9513999999981024,
+            0.9745000000002619
+          ],
+          "warmRetrievalSamplesMs": [
+            11.075000000000728,
+            12.49040000000241,
+            12.886900000001333
+          ]
+        },
+        "hybrid_reranked": {
+          "topIds": [
+            "force",
+            "law72",
+            "law720"
+          ],
+          "expectedIds": [
+            "force"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            1.181800000002113,
+            1.114399999998568,
+            1.1448999999993248,
+            1.1231000000007043,
+            1.123200000001816,
+            1.1156000000009954,
+            1.121500000001106,
+            1.176100000000588,
+            1.1116999999976542,
+            1.1201000000000931
+          ],
+          "warmRetrievalSamplesMs": [
+            11.366900000000896,
+            13.450300000000425,
+            12.135399999999208
+          ]
+        }
+      }
+    },
+    {
+      "id": "paraphrase-indemnity",
+      "question": "Who protects us if another company sues us over a patent?",
+      "documentIds": [
+        "commercial"
+      ],
+      "variants": {
+        "keyword": {
+          "topIds": [],
+          "expectedIds": [
+            "indemnity"
+          ],
+          "top1Hit": false,
+          "recallAt3": 0,
+          "reciprocalRankAt3": 0,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.5725000000020373,
+            0.5861000000004424,
+            0.5675999999984924,
+            0.5724999999983993,
+            0.563799999999901,
+            0.5868000000009488,
+            0.5690000000031432,
+            0.5639000000010128,
+            0.604299999999057,
+            0.5719000000026426
+          ],
+          "warmRetrievalSamplesMs": [
+            0.11779999999998836,
+            0.1540000000022701,
+            0.17729999999937718
+          ]
+        },
+        "semantic": {
+          "topIds": [
+            "indemnity",
+            "insurance",
+            "law720"
+          ],
+          "expectedIds": [
+            "indemnity"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.5959999999977299,
+            0.5721000000012282,
+            0.5758999999998196,
+            0.5681000000004133,
+            0.5987000000022817,
+            0.5429000000003725,
+            0.5993000000016764,
+            0.599900000001071,
+            0.561600000000908,
+            0.5803000000014435
+          ],
+          "warmRetrievalSamplesMs": [
+            14.992299999998068,
+            11.309300000000803,
+            11.995299999998679
+          ]
+        },
+        "semantic_reranked": {
+          "topIds": [
+            "indemnity",
+            "insurance",
+            "law720"
+          ],
+          "expectedIds": [
+            "indemnity"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.6993000000002212,
+            0.7321000000010827,
+            0.7536000000000058,
+            0.6922999999987951,
+            0.746899999998277,
+            0.7584999999999127,
+            0.7181000000018685,
+            1.0250000000014552,
+            0.7407999999995809,
+            0.8798999999999069
+          ],
+          "warmRetrievalSamplesMs": [
+            15.415400000001682,
+            12.298500000000786,
+            16.313500000000204
+          ]
+        },
+        "hybrid": {
+          "topIds": [
+            "indemnity",
+            "insurance",
+            "law720"
+          ],
+          "expectedIds": [
+            "indemnity"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.581400000002759,
+            0.5816999999988184,
+            0.5864999999976135,
+            0.5711000000010245,
+            0.5781000000024505,
+            0.5973999999987427,
+            0.5914000000011583,
+            0.5898999999990338,
+            0.5810999999994237,
+            0.5995999999977357
+          ],
+          "warmRetrievalSamplesMs": [
+            15.664600000000064,
+            16.85870000000068,
+            12.427700000000186
+          ]
+        },
+        "hybrid_reranked": {
+          "topIds": [
+            "indemnity",
+            "insurance",
+            "law720"
+          ],
+          "expectedIds": [
+            "indemnity"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.7692999999999302,
+            0.766299999999319,
+            0.7334000000009837,
+            0.7371999999995751,
+            0.747800000001007,
+            0.7685999999994237,
+            0.776400000002468,
+            0.7644000000000233,
+            0.746500000001106,
+            0.760999999998603
+          ],
+          "warmRetrievalSamplesMs": [
+            13.323800000001938,
+            16.539300000000367,
+            12.131700000001729
+          ]
+        }
+      }
+    },
+    {
+      "id": "paraphrase-disaster",
+      "question": "Can an earthquake excuse a delay?",
+      "documentIds": [
+        "commercial"
+      ],
+      "variants": {
+        "keyword": {
+          "topIds": [
+            "force"
+          ],
+          "expectedIds": [
+            "force"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.9621999999981199,
+            0.947199999998702,
+            0.980199999998149,
+            0.9822999999996682,
+            1.005699999997887,
+            1.0159000000021479,
+            1.0326999999997497,
+            1.0393999999978405,
+            1.063799999999901,
+            1.0208000000020547
+          ],
+          "warmRetrievalSamplesMs": [
+            0.13980000000083237,
+            0.12849999999889405,
+            0.11520000000018626
+          ]
+        },
+        "semantic": {
+          "topIds": [
+            "force",
+            "credit",
+            "credit-incidental"
+          ],
+          "expectedIds": [
+            "force"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            1.062099999999191,
+            1.1455999999998312,
+            1.1507000000019616,
+            1.0002000000022235,
+            0.9982999999992899,
+            0.9889000000002852,
+            0.9959000000017113,
+            0.9972000000016124,
+            0.9927999999999884,
+            1.4324999999989814
+          ],
+          "warmRetrievalSamplesMs": [
+            13.549200000001292,
+            10.393800000001647,
+            10.67920000000231
+          ]
+        },
+        "semantic_reranked": {
+          "topIds": [
+            "force",
+            "credit",
+            "credit-incidental"
+          ],
+          "expectedIds": [
+            "force"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            1.1894999999967695,
+            1.1834000000017113,
+            1.183100000002014,
+            1.168099999998958,
+            1.1791999999986729,
+            1.2004999999990105,
+            1.2122999999992317,
+            1.2146000000029744,
+            1.171699999998964,
+            1.176500000001397
+          ],
+          "warmRetrievalSamplesMs": [
+            10.530600000001868,
+            10.88799999999901,
+            10.89140000000043
+          ]
+        },
+        "hybrid": {
+          "topIds": [
+            "force",
+            "credit",
+            "credit-incidental"
+          ],
+          "expectedIds": [
+            "force"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            1.0073999999985972,
+            1.001800000001822,
+            1.003499999998894,
+            0.9910000000018044,
+            0.9971000000005006,
+            0.9881999999997788,
+            0.9951999999975669,
+            1.0167999999976018,
+            0.9993000000031316,
+            0.9615999999987253
+          ],
+          "warmRetrievalSamplesMs": [
+            10.401099999999133,
+            10.506799999999203,
+            10.770799999998417
+          ]
+        },
+        "hybrid_reranked": {
+          "topIds": [
+            "force",
+            "credit",
+            "credit-incidental"
+          ],
+          "expectedIds": [
+            "force"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            1.1509000000005472,
+            1.1529000000009546,
+            1.146999999997206,
+            1.1383999999998196,
+            1.1561999999976251,
+            1.230200000001787,
+            0.8281999999999243,
+            0.8035000000018044,
+            0.8104999999995925,
+            1.1347999999998137
+          ],
+          "warmRetrievalSamplesMs": [
+            10.436299999997573,
+            10.676699999999983,
+            10.594700000001467
+          ]
+        }
+      }
+    },
+    {
+      "id": "long-document-paraphrase",
+      "question": "How many days are allowed to fix a violation after receiving a written warning?",
+      "documentIds": [
+        "long"
+      ],
+      "variants": {
+        "keyword": {
+          "topIds": [
+            "cure"
+          ],
+          "expectedIds": [
+            "cure"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            6.694700000000012,
+            10.109900000003108,
+            8.600999999998749,
+            5.234499999998661,
+            5.06000000000131,
+            6.724099999999453,
+            5.452099999998609,
+            5.185299999997369,
+            5.528699999998935,
+            5.0767999999989115
+          ],
+          "warmRetrievalSamplesMs": [
+            1.8004999999975553,
+            0.6533999999992375,
+            0.7419000000008964
+          ]
+        },
+        "semantic": {
+          "topIds": [
+            "cure",
+            "long-filler-58",
+            "long-filler-24"
+          ],
+          "expectedIds": [
+            "cure"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            6.617099999999482,
+            8.547600000001694,
+            10.866500000000087,
+            5.791100000002189,
+            5.218600000000151,
+            5.142600000002858,
+            5.242899999997462,
+            5.755300000000716,
+            5.486000000000786,
+            5.093799999998737
+          ],
+          "warmRetrievalSamplesMs": [
+            24.735000000000582,
+            19.820299999999406,
+            16.312200000000303
+          ]
+        },
+        "semantic_reranked": {
+          "topIds": [
+            "cure",
+            "long-filler-58",
+            "long-filler-24"
+          ],
+          "expectedIds": [
+            "cure"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            5.446499999998196,
+            5.458600000001752,
+            5.391099999997095,
+            5.701399999998102,
+            6.643400000000838,
+            6.985499999998865,
+            7.318400000000111,
+            7.448500000002241,
+            7.049299999998766,
+            9.608900000002905
+          ],
+          "warmRetrievalSamplesMs": [
+            17.031599999998434,
+            18.877199999998993,
+            16.16690000000017
+          ]
+        },
+        "hybrid": {
+          "topIds": [
+            "cure",
+            "long-filler-58",
+            "long-filler-24"
+          ],
+          "expectedIds": [
+            "cure"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            9.380600000000413,
+            8.151300000001356,
+            5.274499999999534,
+            5.256199999999808,
+            4.897299999996903,
+            4.524099999998725,
+            4.696799999997893,
+            4.777200000000448,
+            5.147000000000844,
+            4.790499999999156
+          ],
+          "warmRetrievalSamplesMs": [
+            16.444800000001123,
+            18.092400000001362,
+            15.805299999999988
+          ]
+        },
+        "hybrid_reranked": {
+          "topIds": [
+            "cure",
+            "long-filler-58",
+            "long-filler-24"
+          ],
+          "expectedIds": [
+            "cure"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            5.303299999999581,
+            5.245100000000093,
+            5.636699999999109,
+            5.925999999999476,
+            5.3179999999993015,
+            5.27219999999943,
+            5.202799999999115,
+            5.310199999999895,
+            10.189900000001217,
+            10.13470000000234
+          ],
+          "warmRetrievalSamplesMs": [
+            19.970000000001164,
+            16.644899999999325,
+            16.28559999999925
+          ]
+        }
+      }
+    },
+    {
+      "id": "heading",
+      "question": "What service credit applies?",
+      "documentIds": [
+        "commercial"
+      ],
+      "variants": {
+        "keyword": {
+          "topIds": [
+            "credit",
+            "credit-incidental",
+            "parties"
+          ],
+          "expectedIds": [
+            "credit"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.6159999999981665,
+            0.6172000000005937,
+            0.6062000000019907,
+            0.6223000000027241,
+            0.6268999999992957,
+            0.6152000000001863,
+            0.6383999999998196,
+            0.639100000000326,
+            0.6327999999994063,
+            0.6319000000003143
+          ],
+          "warmRetrievalSamplesMs": [
+            0.11890000000130385,
+            0.11059999999997672,
+            0.10619999999835272
+          ]
+        },
+        "semantic": {
+          "topIds": [
+            "credit",
+            "credit-incidental",
+            "effective"
+          ],
+          "expectedIds": [
+            "credit"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.6466000000000349,
+            0.6355999999977939,
+            0.6440000000002328,
+            0.6622999999999593,
+            0.6493000000009488,
+            0.6595000000015716,
+            0.653599999997823,
+            0.6329999999979918,
+            0.6305000000029395,
+            0.6395999999986088
+          ],
+          "warmRetrievalSamplesMs": [
+            10.991699999998673,
+            10.361500000002707,
+            10.4333000000006
+          ]
+        },
+        "semantic_reranked": {
+          "topIds": [
+            "credit",
+            "credit-incidental",
+            "parties"
+          ],
+          "expectedIds": [
+            "credit"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.8241999999991094,
+            0.788300000000163,
+            0.7851000000009662,
+            0.8041000000011991,
+            0.8321999999971013,
+            0.786099999997532,
+            0.7848999999987427,
+            0.7797999999966123,
+            0.7726000000002387,
+            1.0993000000016764
+          ],
+          "warmRetrievalSamplesMs": [
+            10.491400000002614,
+            10.625,
+            10.82220000000234
+          ]
+        },
+        "hybrid": {
+          "topIds": [
+            "credit",
+            "credit-incidental",
+            "parties"
+          ],
+          "expectedIds": [
+            "credit"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.6492999999973108,
+            0.6746999999995751,
+            0.6630000000004657,
+            0.636899999997695,
+            0.6687999999994645,
+            0.6634999999987485,
+            0.6327999999994063,
+            0.6417000000001281,
+            0.6754999999975553,
+            0.654500000000553
+          ],
+          "warmRetrievalSamplesMs": [
+            10.666900000000169,
+            10.881600000000617,
+            13.721799999999348
+          ]
+        },
+        "hybrid_reranked": {
+          "topIds": [
+            "credit",
+            "credit-incidental",
+            "parties"
+          ],
+          "expectedIds": [
+            "credit"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.7991000000001804,
+            0.8040000000000873,
+            0.7639000000017404,
+            0.7648000000008324,
+            0.7726000000002387,
+            0.7867999999980384,
+            0.7988999999979569,
+            0.7648000000008324,
+            0.7646000000022468,
+            0.7710000000006403
+          ],
+          "warmRetrievalSamplesMs": [
+            10.73269999999684,
+            10.380699999997887,
+            10.751699999997072
+          ]
+        }
+      }
+    },
+    {
+      "id": "conflicting-terms",
+      "question": "What is the termination notice period?",
+      "documentIds": [
+        "conflict"
+      ],
+      "variants": {
+        "keyword": {
+          "topIds": [
+            "termination30",
+            "termination60"
+          ],
+          "expectedIds": [
+            "termination30",
+            "termination60"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.16649999999935972,
+            0.13479999999981374,
+            0.13929999999891152,
+            0.1309000000001106,
+            0.12769999999727588,
+            0.12819999999919673,
+            0.1264999999984866,
+            0.12950000000273576,
+            0.13790000000153668,
+            0.12780000000202563
+          ],
+          "warmRetrievalSamplesMs": [
+            0.037299999999959255,
+            0.04839999999967404,
+            0.053599999999278225
+          ]
+        },
+        "semantic": {
+          "topIds": [
+            "termination60",
+            "termination30"
+          ],
+          "expectedIds": [
+            "termination30",
+            "termination60"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.13620000000082655,
+            0.13179999999920256,
+            0.1290000000008149,
+            0.12860000000000582,
+            0.12860000000000582,
+            0.13509999999951106,
+            0.1297999999987951,
+            0.14310000000114087,
+            0.1257000000005064,
+            0.1242999999994936
+          ],
+          "warmRetrievalSamplesMs": [
+            10.543499999999767,
+            11.8096000000005,
+            10.636099999999715
+          ]
+        },
+        "semantic_reranked": {
+          "topIds": [
+            "termination60",
+            "termination30"
+          ],
+          "expectedIds": [
+            "termination30",
+            "termination60"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.15789999999833526,
+            0.15100000000165892,
+            0.15020000000004075,
+            0.1481000000021595,
+            0.14730000000054133,
+            0.14749999999912689,
+            0.14749999999912689,
+            0.1474000000016531,
+            0.1562999999987369,
+            0.16300000000046566
+          ],
+          "warmRetrievalSamplesMs": [
+            10.124799999997776,
+            10.500899999999092,
+            10.427199999998265
+          ]
+        },
+        "hybrid": {
+          "topIds": [
+            "termination30",
+            "termination60"
+          ],
+          "expectedIds": [
+            "termination30",
+            "termination60"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.14210000000093714,
+            0.1334000000024389,
+            0.1760000000031141,
+            0.13139999999839347,
+            0.13139999999839347,
+            0.14219999999841093,
+            0.12710000000151922,
+            0.12770000000091386,
+            0.12600000000020373,
+            0.12590000000272994
+          ],
+          "warmRetrievalSamplesMs": [
+            10.01169999999911,
+            10.454900000000634,
+            10.658300000002782
+          ]
+        },
+        "hybrid_reranked": {
+          "topIds": [
+            "termination30",
+            "termination60"
+          ],
+          "expectedIds": [
+            "termination30",
+            "termination60"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.18000000000029104,
+            0.15820000000167056,
+            0.15689999999813153,
+            0.1536999999989348,
+            0.15580000000045402,
+            0.15500000000247383,
+            0.16939999999885913,
+            0.1574000000000524,
+            0.15799999999944703,
+            0.1569999999992433
+          ],
+          "warmRetrievalSamplesMs": [
+            10.217199999999139,
+            10.48620000000301,
+            10.621100000000297
+          ]
+        }
+      }
+    },
+    {
+      "id": "permitted-collection",
+      "question": "What written termination notice is required?",
+      "documentIds": [
+        "commercial",
+        "conflict"
+      ],
+      "variants": {
+        "keyword": {
+          "topIds": [
+            "termination30",
+            "termination60"
+          ],
+          "expectedIds": [
+            "termination30",
+            "termination60"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            1.0277999999998428,
+            1.027299999997922,
+            1.011000000002241,
+            1.0279000000009546,
+            1.0361999999986438,
+            1.0238999999965017,
+            1.0069000000003143,
+            1.016700000000128,
+            1.032999999999447,
+            0.9727999999995518
+          ],
+          "warmRetrievalSamplesMs": [
+            0.20120000000315486,
+            0.19310000000041327,
+            0.1742000000012922
+          ]
+        },
+        "semantic": {
+          "topIds": [
+            "termination60",
+            "termination30",
+            "credit-incidental"
+          ],
+          "expectedIds": [
+            "termination30",
+            "termination60"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            1.0051999999996042,
+            1.3479000000006636,
+            1.0275999999976193,
+            1.0146999999997206,
+            1.036500000001979,
+            1.037899999999354,
+            1.0450000000018917,
+            1.0658000000003085,
+            1.0769000000000233,
+            1.0368999999991502
+          ],
+          "warmRetrievalSamplesMs": [
+            11.602999999999156,
+            11.305900000003021,
+            12.960699999999633
+          ]
+        },
+        "semantic_reranked": {
+          "topIds": [
+            "termination60",
+            "termination30",
+            "credit-incidental"
+          ],
+          "expectedIds": [
+            "termination30",
+            "termination60"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            1.2969999999986612,
+            1.3101000000024214,
+            1.317299999998795,
+            1.2947000000021944,
+            1.2659999999996217,
+            1.3158000000003085,
+            1.3180000000029395,
+            1.2875999999996566,
+            1.2842000000018743,
+            1.2885999999998603
+          ],
+          "warmRetrievalSamplesMs": [
+            11.269699999997101,
+            12.233400000000984,
+            11.644000000000233
+          ]
+        },
+        "hybrid": {
+          "topIds": [
+            "termination30",
+            "termination60",
+            "credit-incidental"
+          ],
+          "expectedIds": [
+            "termination30",
+            "termination60"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            1.0865999999987253,
+            1.120599999998376,
+            1.1089999999967404,
+            1.0978999999970256,
+            1.1035000000010768,
+            1.1062999999994645,
+            1.106999999999971,
+            1.0859999999993306,
+            1.1131999999997788,
+            1.1031999999977415
+          ],
+          "warmRetrievalSamplesMs": [
+            11.450000000000728,
+            11.71679999999833,
+            11.447899999999208
+          ]
+        },
+        "hybrid_reranked": {
+          "topIds": [
+            "termination30",
+            "termination60",
+            "credit-incidental"
+          ],
+          "expectedIds": [
+            "termination30",
+            "termination60"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            1.6684000000022934,
+            1.3211999999984982,
+            1.2847000000001572,
+            1.2894000000014785,
+            1.2881000000015774,
+            1.2813999999998487,
+            1.2881999999990512,
+            1.3038999999989755,
+            1.3114999999997963,
+            1.3220000000001164
+          ],
+          "warmRetrievalSamplesMs": [
+            11.650999999998021,
+            11.40309999999954,
+            11.615700000002107
+          ]
+        }
+      }
+    },
+    {
+      "id": "marathi-exact-ocr-text",
+      "question": "विलंब दंड किती आहे?",
+      "documentIds": [
+        "scan"
+      ],
+      "variants": {
+        "keyword": {
+          "topIds": [
+            "marathi"
+          ],
+          "expectedIds": [
+            "marathi"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.20939999999973224,
+            0.17469999999957508,
+            0.1709000000009837,
+            0.18500000000130967,
+            0.1775000000016007,
+            0.18779999999969732,
+            0.17459999999846332,
+            0.17740000000048894,
+            0.17699999999967986,
+            0.17650000000139698
+          ],
+          "warmRetrievalSamplesMs": [
+            0.051800000001094304,
+            0.05229999999937718,
+            0.05519999999887659
+          ]
+        },
+        "semantic": {
+          "topIds": [
+            "marathi",
+            "ocr"
+          ],
+          "expectedIds": [
+            "marathi"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.2076999999990221,
+            0.18769999999858555,
+            0.18629999999757274,
+            0.18549999999959255,
+            0.19210000000020955,
+            0.20309999999881256,
+            0.19499999999970896,
+            0.19809999999779393,
+            0.19420000000172877,
+            0.20560000000114087
+          ],
+          "warmRetrievalSamplesMs": [
+            15.673299999998562,
+            23.611800000002404,
+            15.452399999998306
+          ]
+        },
+        "semantic_reranked": {
+          "topIds": [
+            "marathi",
+            "ocr"
+          ],
+          "expectedIds": [
+            "marathi"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.2522999999964668,
+            0.2467999999971653,
+            0.23769999999785796,
+            0.23519999999916763,
+            0.236799999998766,
+            0.23229999999966822,
+            0.24429999999847496,
+            0.23389999999926658,
+            0.23280000000158907,
+            0.23180000000138534
+          ],
+          "warmRetrievalSamplesMs": [
+            15.542699999998149,
+            15.574400000001333,
+            15.782899999998335
+          ]
+        },
+        "hybrid": {
+          "topIds": [
+            "marathi",
+            "ocr"
+          ],
+          "expectedIds": [
+            "marathi"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.2055000000000291,
+            0.1993000000002212,
+            0.19859999999971478,
+            0.19470000000001164,
+            0.20799999999871943,
+            0.19550000000162981,
+            0.19460000000253785,
+            0.19499999999970896,
+            0.1948999999985972,
+            0.20429999999760184
+          ],
+          "warmRetrievalSamplesMs": [
+            15.394199999998818,
+            15.098300000001473,
+            15.429400000000896
+          ]
+        },
+        "hybrid_reranked": {
+          "topIds": [
+            "marathi",
+            "ocr"
+          ],
+          "expectedIds": [
+            "marathi"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.2541000000019267,
+            0.24309999999968568,
+            0.2595000000001164,
+            0.2393999999985681,
+            0.23859999999694992,
+            0.23949999999967986,
+            0.24420000000100117,
+            0.24680000000080327,
+            0.23370000000068103,
+            0.23389999999926658
+          ],
+          "warmRetrievalSamplesMs": [
+            15.604800000000978,
+            15.364999999997963,
+            15.939800000000105
+          ]
+        }
+      }
+    },
+    {
+      "id": "uncertain-ocr",
+      "question": "Is the penalty amount clear in the scanned image?",
+      "documentIds": [
+        "scan"
+      ],
+      "variants": {
+        "keyword": {
+          "topIds": [
+            "ocr"
+          ],
+          "expectedIds": [
+            "ocr"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.18879999999990105,
+            0.17410000000018044,
+            0.17150000000037835,
+            0.17180000000007567,
+            0.22369999999864376,
+            0.18599999999787542,
+            0.18579999999928987,
+            0.1815999999998894,
+            0.18059999999968568,
+            0.21039999999993597
+          ],
+          "warmRetrievalSamplesMs": [
+            0.05700000000069849,
+            0.057200000002922025,
+            0.06270000000222353
+          ]
+        },
+        "semantic": {
+          "topIds": [
+            "ocr",
+            "marathi"
+          ],
+          "expectedIds": [
+            "ocr"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.20310000000245054,
+            0.19519999999829452,
+            0.19470000000001164,
+            0.20780000000013388,
+            0.19199999999909778,
+            0.1912000000011176,
+            0.19210000000020955,
+            0.1915000000008149,
+            0.20540000000255532,
+            0.20980000000054133
+          ],
+          "warmRetrievalSamplesMs": [
+            11.042999999997846,
+            11.230800000001182,
+            11.338700000000244
+          ]
+        },
+        "semantic_reranked": {
+          "topIds": [
+            "ocr",
+            "marathi"
+          ],
+          "expectedIds": [
+            "ocr"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.2753000000011525,
+            0.2540999999982887,
+            0.24980000000141445,
+            0.24860000000262517,
+            0.2596000000012282,
+            0.25089999999909196,
+            0.2474000000001979,
+            0.24539999999979045,
+            0.25450000000273576,
+            0.24899999999979627
+          ],
+          "warmRetrievalSamplesMs": [
+            11.143599999999424,
+            11.168399999998655,
+            10.975899999997637
+          ]
+        },
+        "hybrid": {
+          "topIds": [
+            "ocr",
+            "marathi"
+          ],
+          "expectedIds": [
+            "ocr"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.2139999999999418,
+            0.20499999999810825,
+            0.216999999996915,
+            0.2047999999995227,
+            0.2025000000030559,
+            0.20300000000133878,
+            0.20839999999952852,
+            0.20480000000316068,
+            0.20190000000002328,
+            0.20170000000143773
+          ],
+          "warmRetrievalSamplesMs": [
+            10.824799999998504,
+            10.84939999999915,
+            14.063399999999092
+          ]
+        },
+        "hybrid_reranked": {
+          "topIds": [
+            "ocr",
+            "marathi"
+          ],
+          "expectedIds": [
+            "ocr"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.2743999999984226,
+            0.2521000000015192,
+            0.25019999999858555,
+            0.25050000000192085,
+            0.2551999999996042,
+            0.24620000000140863,
+            0.260999999998603,
+            0.24620000000140863,
+            0.2580999999991036,
+            0.2452000000012049
+          ],
+          "warmRetrievalSamplesMs": [
+            13.611799999998766,
+            10.943100000000413,
+            14.634699999998702
+          ]
+        }
+      }
+    },
+    {
+      "id": "absent",
+      "question": "Which Antarctic court has jurisdiction over satellite launches?",
+      "documentIds": [
+        "commercial"
+      ],
+      "variants": {
+        "keyword": {
+          "topIds": [],
+          "expectedIds": [],
+          "top1Hit": null,
+          "recallAt3": null,
+          "reciprocalRankAt3": null,
+          "unsupportedCandidates": 0,
+          "scoringSamplesMs": [
+            0.8801999999996042,
+            0.875899999999092,
+            0.8544999999976426,
+            0.8485000000000582,
+            0.8423000000002503,
+            0.8759000000027299,
+            0.867099999999482,
+            0.8775999999998021,
+            0.8728999999984808,
+            0.8739999999997963
+          ],
+          "warmRetrievalSamplesMs": [
+            0.16890000000057626,
+            0.16450000000259024,
+            0.14270000000033178
+          ]
+        },
+        "semantic": {
+          "topIds": [
+            "parties",
+            "law720",
+            "indemnity"
+          ],
+          "expectedIds": [],
+          "top1Hit": null,
+          "recallAt3": null,
+          "reciprocalRankAt3": null,
+          "unsupportedCandidates": 3,
+          "scoringSamplesMs": [
+            0.9232000000010885,
+            0.9033999999992375,
+            0.9268999999985681,
+            0.9350999999987835,
+            0.8987999999990279,
+            0.9068000000006577,
+            0.9157000000013795,
+            0.9279000000024098,
+            0.9370000000017171,
+            0.9530000000013388
+          ],
+          "warmRetrievalSamplesMs": [
+            12.14310000000114,
+            11.77390000000014,
+            15.751299999999901
+          ]
+        },
+        "semantic_reranked": {
+          "topIds": [
+            "parties",
+            "law720",
+            "indemnity"
+          ],
+          "expectedIds": [],
+          "top1Hit": null,
+          "recallAt3": null,
+          "reciprocalRankAt3": null,
+          "unsupportedCandidates": 3,
+          "scoringSamplesMs": [
+            1.1458999999995285,
+            1.125,
+            1.1345000000001164,
+            1.1198999999978696,
+            1.1405999999988126,
+            1.1288000000022294,
+            1.1198000000003958,
+            1.127599999999802,
+            1.1520999999993364,
+            1.175600000002305
+          ],
+          "warmRetrievalSamplesMs": [
+            11.313099999999395,
+            11.224500000000262,
+            17.181400000001304
+          ]
+        },
+        "hybrid": {
+          "topIds": [
+            "parties",
+            "law720",
+            "indemnity"
+          ],
+          "expectedIds": [],
+          "top1Hit": null,
+          "recallAt3": null,
+          "reciprocalRankAt3": null,
+          "unsupportedCandidates": 3,
+          "scoringSamplesMs": [
+            0.9658000000017637,
+            0.9557000000022526,
+            0.9451000000008207,
+            0.9624999999978172,
+            0.9586999999992258,
+            0.9665999999997439,
+            0.948500000002241,
+            0.9538999999967928,
+            0.9553999999989173,
+            0.9568999999974039
+          ],
+          "warmRetrievalSamplesMs": [
+            11.551800000001094,
+            12.485000000000582,
+            17.78229999999894
+          ]
+        },
+        "hybrid_reranked": {
+          "topIds": [
+            "parties",
+            "law720",
+            "indemnity"
+          ],
+          "expectedIds": [],
+          "top1Hit": null,
+          "recallAt3": null,
+          "reciprocalRankAt3": null,
+          "unsupportedCandidates": 3,
+          "scoringSamplesMs": [
+            1.2128000000011525,
+            1.2080000000023574,
+            1.1516000000010536,
+            1.1592000000018743,
+            1.14969999999812,
+            1.157999999999447,
+            1.1602999999995518,
+            1.1483999999982188,
+            1.1624999999985448,
+            1.1458999999995285
+          ],
+          "warmRetrievalSamplesMs": [
+            11.750700000000506,
+            12.59519999999975,
+            17.371800000000803
+          ]
+        }
+      }
+    },
+    {
+      "id": "nda-cap",
+      "question": "What is the liability cap?",
+      "documentIds": [
+        "nda"
+      ],
+      "variants": {
+        "keyword": {
+          "topIds": [
+            "nda-1"
+          ],
+          "expectedIds": [
+            "nda-1"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.5011000000013155,
+            0.4695000000028813,
+            0.4478000000017346,
+            0.41880000000310247,
+            0.4017999999996391,
+            0.32519999999931315,
+            0.4654999999984284,
+            0.44980000000214204,
+            0.4853000000002794,
+            0.4739000000008673
+          ],
+          "warmRetrievalSamplesMs": [
+            0.1455999999998312,
+            0.243399999999383,
+            0.21979999999894062
+          ]
+        },
+        "semantic": {
+          "topIds": [
+            "nda-1",
+            "nda-0"
+          ],
+          "expectedIds": [
+            "nda-1"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.48400000000037835,
+            0.33889999999883,
+            0.2893000000003667,
+            0.36019999999916763,
+            0.2790000000022701,
+            0.2868000000016764,
+            0.3004000000000815,
+            0.27440000000206055,
+            0.26239999999961583,
+            0.26299999999901047
+          ],
+          "warmRetrievalSamplesMs": [
+            13.04910000000018,
+            12.567699999999604,
+            14.53399999999965
+          ]
+        },
+        "semantic_reranked": {
+          "topIds": [
+            "nda-1",
+            "nda-0"
+          ],
+          "expectedIds": [
+            "nda-1"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.39949999999953434,
+            0.38400000000183354,
+            0.4252999999989697,
+            0.3819999999977881,
+            0.41309999999793945,
+            0.38699999999880674,
+            0.38990000000194414,
+            0.40720000000146683,
+            0.3760000000002037,
+            0.4037000000025728
+          ],
+          "warmRetrievalSamplesMs": [
+            13.115399999998772,
+            12.820199999998295,
+            14.936399999998685
+          ]
+        },
+        "hybrid": {
+          "topIds": [
+            "nda-1",
+            "nda-0"
+          ],
+          "expectedIds": [
+            "nda-1"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.2800999999999476,
+            0.2720999999983178,
+            0.275099999998929,
+            0.26080000000001746,
+            0.2720999999983178,
+            0.6010999999998603,
+            0.27149999999892316,
+            0.26559999999881256,
+            0.28769999999713036,
+            0.2485999999989872
+          ],
+          "warmRetrievalSamplesMs": [
+            13.046800000000076,
+            12.609300000000076,
+            14.593899999999849
+          ]
+        },
+        "hybrid_reranked": {
+          "topIds": [
+            "nda-1",
+            "nda-0"
+          ],
+          "expectedIds": [
+            "nda-1"
+          ],
+          "top1Hit": true,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 1,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.3863000000019383,
+            0.3595000000022992,
+            0.324399999997695,
+            0.344199999999546,
+            0.3286999999982072,
+            0.32299999999668216,
+            0.3374000000003434,
+            0.32340000000112923,
+            0.32580000000234577,
+            0.33889999999883
+          ],
+          "warmRetrievalSamplesMs": [
+            12.760499999996682,
+            10.698899999999412,
+            15.67280000000028
+          ]
+        }
+      }
+    },
+    {
+      "id": "nda-date",
+      "question": "What is the effective date?",
+      "documentIds": [
+        "nda"
+      ],
+      "variants": {
+        "keyword": {
+          "topIds": [
+            "nda-1",
+            "nda-0"
+          ],
+          "expectedIds": [
+            "nda-0"
+          ],
+          "top1Hit": false,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 0.5,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.2502999999996973,
+            0.22070000000167056,
+            0.21679999999832944,
+            0.21319999999832362,
+            0.2168999999994412,
+            0.2944999999999709,
+            0.23280000000158907,
+            0.22079999999914435,
+            0.21780000000217115,
+            0.22620000000097207
+          ],
+          "warmRetrievalSamplesMs": [
+            0.16159999999945285,
+            0.1607000000003609,
+            0.1573000000025786
+          ]
+        },
+        "semantic": {
+          "topIds": [
+            "nda-1",
+            "nda-0"
+          ],
+          "expectedIds": [
+            "nda-0"
+          ],
+          "top1Hit": false,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 0.5,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.5436999999983527,
+            0.26150000000052387,
+            0.23220000000219443,
+            0.22430000000167638,
+            0.22620000000097207,
+            0.24550000000090222,
+            0.23080000000118162,
+            0.22950000000128057,
+            0.22920000000158325,
+            0.24439999999958673
+          ],
+          "warmRetrievalSamplesMs": [
+            10.809799999999086,
+            13.667100000002392,
+            13.729100000000471
+          ]
+        },
+        "semantic_reranked": {
+          "topIds": [
+            "nda-1",
+            "nda-0"
+          ],
+          "expectedIds": [
+            "nda-0"
+          ],
+          "top1Hit": false,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 0.5,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.3801999999996042,
+            0.3728999999984808,
+            0.35280000000057044,
+            0.35749999999825377,
+            0.38690000000133296,
+            0.3562000000019907,
+            0.3647000000019034,
+            0.3559000000022934,
+            0.356500000001688,
+            0.37989999999990687
+          ],
+          "warmRetrievalSamplesMs": [
+            13.029499999996915,
+            13.835399999999936,
+            13.909800000001269
+          ]
+        },
+        "hybrid": {
+          "topIds": [
+            "nda-1",
+            "nda-0"
+          ],
+          "expectedIds": [
+            "nda-0"
+          ],
+          "top1Hit": false,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 0.5,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.26480000000083237,
+            0.25900000000183354,
+            0.2606999999989057,
+            0.24350000000049477,
+            0.24120000000039,
+            0.26190000000133296,
+            0.26450000000113505,
+            0.2466000000022177,
+            0.24950000000171713,
+            0.26850000000194996
+          ],
+          "warmRetrievalSamplesMs": [
+            13.568699999999808,
+            14.128899999999703,
+            13.641799999997602
+          ]
+        },
+        "hybrid_reranked": {
+          "topIds": [
+            "nda-1",
+            "nda-0"
+          ],
+          "expectedIds": [
+            "nda-0"
+          ],
+          "top1Hit": false,
+          "recallAt3": 1,
+          "reciprocalRankAt3": 0.5,
+          "unsupportedCandidates": null,
+          "scoringSamplesMs": [
+            0.3856000000014319,
+            0.400099999998929,
+            0.36229999999704887,
+            0.3750999999974738,
+            0.35979999999835854,
+            0.3580999999976484,
+            0.375,
+            0.3631999999997788,
+            0.3580999999976484,
+            0.6370999999999185
+          ],
+          "warmRetrievalSamplesMs": [
+            13.662500000002183,
+            14.012199999997392,
+            13.831599999997707
+          ]
+        }
+      }
+    }
+  ]
+}

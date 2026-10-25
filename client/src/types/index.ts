@@ -140,6 +140,8 @@ export interface DocumentRecord {
 }
 
 export interface ChatCitation {
+  documentId?: string;
+  ocrReviewFlags?: string[];
   verified?: boolean;
   excerpt: string;
   pageNumber: number;
@@ -191,15 +193,6 @@ export interface GeneratedDocument {
   createdAt: string;
 }
 
-export interface AIProviderStatus {
-  activeProvider: 'groq' | 'gemini' | 'openai' | 'rule_engine';
-  isLiveLlm: boolean;
-  groqConfigured: boolean;
-  geminiConfigured: boolean;
-  openaiConfigured: boolean;
-  model?: string;
-  notice: string;
-}
 
 export interface DashboardStats {
   stats: {
@@ -213,5 +206,4 @@ export interface DashboardStats {
   recentDocuments: DocumentRecord[];
   upcomingObligations: ExtractedObligation[];
   recentGeneratedDocs: GeneratedDocument[];
-  aiStatus: AIProviderStatus;
 }

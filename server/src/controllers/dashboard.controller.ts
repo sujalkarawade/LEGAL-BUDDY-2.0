@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import prisma from '../prisma/client.js';
-import { AIAdapter } from '../services/ai/ai-adapter.js';
 
 export class DashboardController {
   static async getStats(req: Request, res: Response): Promise<void> {
@@ -79,8 +78,6 @@ export class DashboardController {
         }),
       ]);
 
-      const aiStatus = AIAdapter.getProviderStatus();
-
       res.json({
         stats: {
           totalDocs,
@@ -93,7 +90,6 @@ export class DashboardController {
         recentDocuments: recentDocs,
         upcomingObligations,
         recentGeneratedDocs,
-        aiStatus,
       });
     } catch (error: any) {
       console.error('Dashboard stats retrieval failed.');
@@ -105,12 +101,9 @@ export class DashboardController {
     try {
       // Test DB
       await prisma.$queryRaw`SELECT 1`;
-      const aiStatus = AIAdapter.getProviderStatus();
-
       res.json({
         status: 'healthy',
         database: 'connected',
-        aiStatus,
         version: '1.0.0',
         timestamp: new Date().toISOString(),
       });

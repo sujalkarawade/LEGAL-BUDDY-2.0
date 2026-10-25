@@ -1,5 +1,5 @@
 {
-  "executedAt": "2026-10-19T18:24:10.143Z",
+  "executedAt": "2026-10-21T15:53:54.626Z",
   "fixtureSha256": "8d080a98be7d915dd6dcb3a08191a0c77d9df170f428a99f78fa2641baee81db",
   "mode": "keyword_fallback",
   "data": "Synthetic text; Marathi cases do not execute OCR.",
@@ -18,9 +18,9 @@
       "correctPage": true,
       "citationValidationPassed": true,
       "generated": null,
-      "generatedAnswerAccuracy": "NOT MEASURED: expected answer is a validator fixture, not model output",
-      "retrievalMs": 10.36,
-      "totalMs": 14
+      "generatedAnswerAccuracy": "NOT MEASURED: expected answer is a validator fixture, not legal accuracy",
+      "retrievalMs": 7.37,
+      "totalMs": 9.68
     },
     {
       "id": "long-document",
@@ -36,9 +36,9 @@
       "correctPage": true,
       "citationValidationPassed": true,
       "generated": null,
-      "generatedAnswerAccuracy": "NOT MEASURED: expected answer is a validator fixture, not model output",
-      "retrievalMs": 1.6,
-      "totalMs": 2.5
+      "generatedAnswerAccuracy": "NOT MEASURED: expected answer is a validator fixture, not legal accuracy",
+      "retrievalMs": 1.05,
+      "totalMs": 1.9
     },
     {
       "id": "clause-number",
@@ -54,9 +54,9 @@
       "correctPage": true,
       "citationValidationPassed": true,
       "generated": null,
-      "generatedAnswerAccuracy": "NOT MEASURED: expected answer is a validator fixture, not model output",
-      "retrievalMs": 0.43,
-      "totalMs": 0.6
+      "generatedAnswerAccuracy": "NOT MEASURED: expected answer is a validator fixture, not legal accuracy",
+      "retrievalMs": 0.59,
+      "totalMs": 0.8
     },
     {
       "id": "date-and-amount",
@@ -72,9 +72,9 @@
       "correctPage": true,
       "citationValidationPassed": true,
       "generated": null,
-      "generatedAnswerAccuracy": "NOT MEASURED: expected answer is a validator fixture, not model output",
-      "retrievalMs": 0.37,
-      "totalMs": 0.64
+      "generatedAnswerAccuracy": "NOT MEASURED: expected answer is a validator fixture, not legal accuracy",
+      "retrievalMs": 1.05,
+      "totalMs": 1.44
     },
     {
       "id": "absent-answer",
@@ -88,9 +88,9 @@
       "correctPage": true,
       "citationValidationPassed": true,
       "generated": null,
-      "generatedAnswerAccuracy": "NOT MEASURED: expected answer is a validator fixture, not model output",
-      "retrievalMs": 0.35,
-      "totalMs": 0.43
+      "generatedAnswerAccuracy": "NOT MEASURED: expected answer is a validator fixture, not legal accuracy",
+      "retrievalMs": 0.65,
+      "totalMs": 0.76
     },
     {
       "id": "conflicting-passages",
@@ -108,9 +108,9 @@
       "correctPage": true,
       "citationValidationPassed": true,
       "generated": null,
-      "generatedAnswerAccuracy": "NOT MEASURED: expected answer is a validator fixture, not model output",
-      "retrievalMs": 0.48,
-      "totalMs": 0.62
+      "generatedAnswerAccuracy": "NOT MEASURED: expected answer is a validator fixture, not legal accuracy",
+      "retrievalMs": 18.98,
+      "totalMs": 19.22
     },
     {
       "id": "marathi-english-scan",
@@ -126,9 +126,9 @@
       "correctPage": true,
       "citationValidationPassed": true,
       "generated": null,
-      "generatedAnswerAccuracy": "NOT MEASURED: expected answer is a validator fixture, not model output",
-      "retrievalMs": 2.21,
-      "totalMs": 2.35
+      "generatedAnswerAccuracy": "NOT MEASURED: expected answer is a validator fixture, not legal accuracy",
+      "retrievalMs": 6.73,
+      "totalMs": 7.12
     },
     {
       "id": "low-quality-ocr",
@@ -144,9 +144,9 @@
       "correctPage": true,
       "citationValidationPassed": true,
       "generated": null,
-      "generatedAnswerAccuracy": "NOT MEASURED: expected answer is a validator fixture, not model output",
-      "retrievalMs": 0.41,
-      "totalMs": 0.52
+      "generatedAnswerAccuracy": "NOT MEASURED: expected answer is a validator fixture, not legal accuracy",
+      "retrievalMs": 3.94,
+      "totalMs": 4.1
     }
   ]
 }

@@ -1,5 +1,5 @@
 {
-  "executedAt": "2026-10-18T12:32:29.302Z",
+  "executedAt": "2026-10-20T05:19:25.538Z",
   "semanticEmbeddingAvailable": false,
   "notice": "Synthetic PDF samples only. Scan retrieval is measured directly; production chat blocks missing pages until verified.",
   "rows": [
@@ -8,29 +8,18 @@
       "question": "What is the liability cap?",
       "expectedPage": 2,
       "expectedText": "$50,000",
-      "retrievalMs": 4.58,
-      "answerMs": 6925.03,
-      "totalMsIncludingExtraction": 7106.84,
+      "retrievalMs": 3.81,
+      "answerMs": 606.8,
+      "totalMsIncludingExtraction": 793.1,
       "expectedPassageRetrieved": true,
       "missingPages": [],
       "ocrConfidence": 1,
       "answer": {
-        "answer": "The liability cap is $50,000 USD for incidental damages under this agreement.",
-        "citations": [
-          {
-            "chunkId": "sample-1",
-            "excerpt": "Each Party total aggregate liability for incidental damages under this agreement shall be capped at $50,000 USD.",
-            "pageNumber": 2,
-            "documentName": "sample_nda.pdf",
-            "score": 0.01639344262295082,
-            "extractionMethod": "selectable",
-            "lowConfidence": false,
-            "verified": true
-          }
-        ],
-        "insufficientEvidence": false,
-        "isDocumentGrounded": true,
-        "provider": "groq",
+        "answer": "Answer generation is unavailable because the configured provider has insufficient credit. No answer or citations have been confirmed.",
+        "citations": [],
+        "isDocumentGrounded": false,
+        "insufficientEvidence": true,
+        "provider": "evidence_fallback",
         "retrievalMode": "keyword_fallback"
       },
       "manualAnswerReview": "pending"
@@ -40,29 +29,18 @@
       "question": "What is the effective date?",
       "expectedPage": 1,
       "expectedText": "October 15, 2026",
-      "retrievalMs": 0.72,
-      "answerMs": 4182.04,
-      "totalMsIncludingExtraction": 4182.83,
+      "retrievalMs": 0.69,
+      "answerMs": 53.88,
+      "totalMsIncludingExtraction": 54.65,
       "expectedPassageRetrieved": true,
       "missingPages": [],
       "ocrConfidence": 1,
       "answer": {
-        "answer": "The effective date is October 15, 2026.",
-        "citations": [
-          {
-            "chunkId": "sample-0",
-            "excerpt": "This Mutual Non-Disclosure Agreement is entered into on October 15, 2026 (\"Effective Date\")",
-            "pageNumber": 1,
-            "documentName": "sample_nda.pdf",
-            "score": 0.01639344262295082,
-            "extractionMethod": "selectable",
-            "lowConfidence": false,
-            "verified": true
-          }
-        ],
-        "insufficientEvidence": false,
-        "isDocumentGrounded": true,
-        "provider": "groq",
+        "answer": "Answer generation is unavailable because the configured provider has insufficient credit. No answer or citations have been confirmed.",
+        "citations": [],
+        "isDocumentGrounded": false,
+        "insufficientEvidence": true,
+        "provider": "evidence_fallback",
         "retrievalMode": "keyword_fallback"
       },
       "manualAnswerReview": "pending"
@@ -72,9 +50,9 @@
       "question": "What are the late shipment penalties?",
       "expectedPage": null,
       "expectedText": null,
-      "retrievalMs": 2.96,
-      "answerMs": 0.08,
-      "totalMsIncludingExtraction": 3.19,
+      "retrievalMs": 0.48,
+      "answerMs": 0.03,
+      "totalMsIncludingExtraction": 0.64,
       "expectedPassageRetrieved": null,
       "missingPages": [],
       "ocrConfidence": 1,
@@ -93,16 +71,16 @@
       "question": "पेमेंट किती आहे?",
       "expectedPage": 2,
       "expectedText": "50,000",
-      "retrievalMs": 2.35,
-      "answerMs": 4042.05,
-      "totalMsIncludingExtraction": 43565.75,
+      "retrievalMs": 2.46,
+      "answerMs": 459.42,
+      "totalMsIncludingExtraction": 14710.2,
       "expectedPassageRetrieved": true,
       "missingPages": [
         3
       ],
       "ocrConfidence": 0.495,
       "answer": {
-        "answer": "A supported answer could not be verified. Please retry or inspect the document directly.",
+        "answer": "Answer generation is unavailable because the configured provider has insufficient credit. No answer or citations have been confirmed.",
         "citations": [],
         "isDocumentGrounded": false,
         "insufficientEvidence": true,

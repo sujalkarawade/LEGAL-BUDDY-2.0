@@ -55,12 +55,14 @@ export interface ChatAnswerResult {
     score: number;
     verified?: boolean;
     chunkId?: string;
+    documentId?: string;
     documentName?: string;
     extractionMethod?: string;
     lowConfidence?: boolean;
+    ocrReviewFlags?: string[];
   }>;
   isDocumentGrounded: boolean;
   insufficientEvidence?: boolean;
   provider: string;
-  retrievalMode?: 'semantic_hybrid' | 'keyword_fallback';
+  retrievalMode?: 'semantic_hybrid' | 'semantic' | 'keyword_fallback';
 }

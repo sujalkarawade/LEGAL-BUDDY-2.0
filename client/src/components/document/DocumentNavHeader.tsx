@@ -55,7 +55,7 @@ export const DocumentNavHeader: React.FC<DocumentNavHeaderProps> = ({ document }
               </span>
               {document.ocrStatus === 'PENDING_REVIEW' && (
                 <span className="border-2 border-[#b7950b] bg-[#fefdf0] text-[#b7950b] px-2 py-0.5 text-[10px] font-black uppercase font-mono animate-pulse">
-                  ⚠️ OCR Review Pending
+                  âš ï¸ OCR Review Pending
                 </span>
               )}
               {document.ocrStatus === 'OCR_COMPLETED' && (
@@ -70,16 +70,10 @@ export const DocumentNavHeader: React.FC<DocumentNavHeaderProps> = ({ document }
               )}
             </div>
             <p className="text-[11px] font-mono text-gray-600 mt-1 uppercase font-semibold">
-              {document.pageCount} {document.pageCount === 1 ? 'PAGE' : 'PAGES'} • UPLOADED{' '}
-              {new Date(document.createdAt).toLocaleDateString()} • ENGINE:{' '}
+              {document.pageCount} {document.pageCount === 1 ? 'PAGE' : 'PAGES'} â€¢ UPLOADED{' '}
+              {new Date(document.createdAt).toLocaleDateString()} â€¢ ENGINE:{' '}
               <span className="text-[#0a0a0a] font-black">
-                {document.summary?.analysisProvider?.includes('groq') || document.summary?.analysisProvider?.includes('neural') || document.summary?.analysisProvider?.includes('llama')
-                  ? 'NEURAL LEGAL AI (LLAMA 3.3 70B)'
-                  : document.summary?.analysisProvider === 'gemini'
-                  ? 'GOOGLE GEMINI 1.5'
-                  : document.summary?.analysisProvider === 'openai'
-                  ? 'OPENAI GPT-4O'
-                  : 'DETERMINISTIC LEGAL ENGINE'}
+                Local Rule Engine
               </span>
             </p>
           </div>

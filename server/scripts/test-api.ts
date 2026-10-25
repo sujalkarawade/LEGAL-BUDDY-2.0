@@ -1,27 +1,31 @@
-// Runs the existing full API suite with actual routes/DB/extraction and a controlled answer provider.
+// Runs the full API suite with real routes/DB/extraction, local rules and controlled synthetic generation.
 // No external provider calls. Seeded development accounts/templates are required.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Server } from 'node:http';
-for (const name of ['GEMINI_API_KEY', 'LLM_API_KEY', 'GROQ_API_KEY', 'OPENAI_API_KEY']) process.env[name] = '';
-process.env.AI_PROVIDER = 'auto';
+import { mock } from 'node:test';
+process.env.AI_PROVIDER = 'heuristic';
+process.env.GROQ_API_KEY = '';
+process.env.OPENROUTER_API_KEY = '';
+process.env.RAG_EMBEDDING_ENABLED = 'false';
 const { default: express } = await import('express');
 const { default: prisma } = await import('../src/prisma/client.js');
-const { AIAdapter } = await import('../src/services/ai/ai-adapter.js');
 const { PaddleOcrService } = await import('../src/services/ocr/paddle-ocr.service.js');
 const { errorHandler } = await import('../src/middleware/error-handler.js');
 const { UPLOAD_DIR, GENERATED_DIR } = await import('../src/config/index.js');
-const adapter = AIAdapter as unknown as { geminiClient: unknown };
-adapter.geminiClient = { getGenerativeModel: () => ({ generateContent: async (raw: string) => {
-  const input = JSON.parse(raw);
-  assert.equal(input.documentName, 'sample_nda.pdf');
-  assert.equal(input.question, 'What is the notice period for return of materials?');
-  const source = input.passages.find((p: any) => p.pageNumber === 2 && /return/i.test(p.text));
-  assert.ok(source, 'The real retriever must supply the expected extracted passage.');
-  return { response: { text: () => JSON.stringify({ answer: 'The retrieved clause describes the return requirement.',
-    insufficientEvidence: false, sources: [{ chunkId: source.chunkId, excerpt: source.text }] }) } };
-} }) };
+const { LocalEmbeddingService } = await import('../src/services/local-embedding.service.js');
+const { LocalAnalysisService } = await import('../src/services/local-analysis.service.js');
+const { validateGroundedAnswer } = await import('../src/services/grounded-answer.js');
+const originalAnswer = LocalAnalysisService.answerQuestion.bind(LocalAnalysisService);
+// Test-only generation for the one known synthetic NDA question. Production validation is shared.
+const answer = mock.method(LocalAnalysisService, 'answerQuestion', async (question, chunks, history, name) => {
+  if (question !== 'What is the notice period for return of materials?') return originalAnswer(question, chunks, history, name);
+  const source = chunks.find(c => c.pageNumber === 2 && /return/i.test(c.content));
+  assert.ok(source, 'The real retriever must supply the extracted return clause on page 2.');
+  return validateGroundedAnswer(JSON.stringify({ answer: 'The retrieved clause describes the return requirement.',
+    insufficientEvidence: false, sources: [{ chunkId: source.id, excerpt: source.content }] }), chunks, name!);
+});
 const app = express(); app.use(express.json());
 for (const [prefix, module] of [['/api/auth', 'auth'], ['/api/documents', 'document'], ['/api', 'template'], ['/api/dashboard', 'dashboard']]) {
   app.use(prefix, (await import(`../src/routes/${module}.routes.js`)).default);
@@ -30,8 +34,8 @@ app.use(errorHandler);
 const server = await new Promise<Server>(resolve => { const s = app.listen(0, '127.0.0.1', () => resolve(s)); });
 const origin = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
 process.env.TEST_API_URL = `${origin}/api`;
-process.env.TEST_RESULTS_PATH = 'evaluations/last-api-audit-results.json';
-process.env.TEST_PROVIDER_MODE = 'controlled-answer-provider; real PostgreSQL, HTTP and PDF/OCR; no external calls';
+process.env.TEST_RESULTS_PATH = 'evaluations/last-hybrid-api-results.json';
+process.env.TEST_ANALYSIS_MODE = 'controlled synthetic answer; real PostgreSQL, HTTP, PDF/OCR, keyword retrieval; no external calls';
 const originalFetch = globalThis.fetch;
 const documents: Array<{ id: string; filePath: string }> = [];
 const generated: Array<{ id: string; docxFileName: string }> = [];
@@ -51,18 +55,20 @@ try {
   await (await import('./test-e2e.js')).runTests();
 } finally {
   globalThis.fetch = originalFetch;
-  adapter.geminiClient = null;
+  answer.mock.restore();
+  PaddleOcrService.shutdown(); LocalEmbeddingService.shutdown();
+  server.closeAllConnections();
   await new Promise<void>(resolve => server.close(() => resolve()));
-  PaddleOcrService.shutdown();
-  await prisma.document.deleteMany({ where: { id: { in: documents.map(doc => doc.id) } } });
-  await prisma.generatedDocument.deleteMany({ where: { id: { in: generated.map(doc => doc.id) } } });
-  for (const doc of documents) {
-    const file = path.resolve(doc.filePath);
-    if (path.dirname(file) === path.resolve(UPLOAD_DIR) && fs.existsSync(file)) fs.unlinkSync(file);
-  }
-  for (const doc of generated) {
-    const file = path.resolve(GENERATED_DIR, doc.docxFileName);
-    if (path.dirname(file) === path.resolve(GENERATED_DIR) && fs.existsSync(file)) fs.unlinkSync(file);
-  }
-  await prisma.$disconnect();
+  try {
+    await prisma.document.deleteMany({ where: { id: { in: documents.filter(d => d?.id).map(d => d.id) } } });
+    await prisma.generatedDocument.deleteMany({ where: { id: { in: generated.map(d => d.id) } } });
+    for (const [root, files] of [[UPLOAD_DIR, documents.map(d => d.filePath)],
+      [GENERATED_DIR, generated.map(d => d.docxFileName ? path.join(GENERATED_DIR, d.docxFileName) : '')]] as const) {
+      for (const file of files.filter(Boolean)) {
+        const resolved = path.resolve(file), relative = path.relative(root, resolved);
+        assert.ok(relative && !relative.startsWith('..') && !path.isAbsolute(relative), 'Cleanup must stay in its output directory');
+        if (fs.existsSync(resolved)) fs.unlinkSync(resolved);
+      }
+    }
+  } finally { await prisma.$disconnect(); }
 }

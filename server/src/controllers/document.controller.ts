@@ -6,17 +6,19 @@ import prisma from '../prisma/client.js';
 import { OcrCacheService } from '../services/ocr/ocr-cache.service.js';
 import { z } from 'zod';
 import { PdfService, type PdfExtractionResult } from '../services/pdf-service.js';
-import { AIAdapter } from '../services/ai/ai-adapter.js';
+import { LocalAnalysisService } from '../services/local-analysis.service.js';
 import { PaddleOcrService } from '../services/ocr/paddle-ocr.service.js';
 import { PageOcrMetadata } from '../services/ocr/ocr.types.js';
 import { JobQueueService } from '../services/job-queue.service.js';
-import { authorizedChunkFilter, RagService } from '../services/rag.service.js';
+import { RagService, RetrievalError } from '../services/rag.service.js';
+import { LocalEmbeddingService, validVector } from '../services/local-embedding.service.js';
 import { isResourceOwner } from '../services/document-access.service.js';
 
-const processingError = 'Processing failed. Review extraction and embedding configuration, then retry.';
+const processingError = 'Processing failed. Review extraction output and local retrieval model configuration, then retry.';
 const textHash = (text: string) => createHash('sha256').update(text).digest('hex');
 
-async function persistIndexedChunks(documentId: string, chunks: Awaited<ReturnType<typeof PdfService.chunkPages>>): Promise<void> {
+async function persistIndexedChunks(documentId: string, chunks: Awaited<ReturnType<typeof PdfService.chunkPages>>): Promise<boolean> {
+  const info = await LocalEmbeddingService.getInfo();
   const existing = await prisma.documentChunk.findMany({ where: { documentId }, orderBy: { chunkIndex: 'asc' } });
   const unchanged = existing.length === chunks.length && chunks.every((chunk, index) => {
     const stored = existing[index];
@@ -24,18 +26,19 @@ async function persistIndexedChunks(documentId: string, chunks: Awaited<ReturnTy
       stored.content === chunk.content && stored.extractionMethod === chunk.extractionMethod &&
       stored.clauseHeading === (chunk.clauseHeading || null);
   });
-  const embeddingsCurrent = !RagService.embeddingEnabled || existing.every((chunk) =>
-    Boolean(RagService.validVector(chunk.embedding) && chunk.embeddingModel === RagService.embeddingModel));
-  if (unchanged && embeddingsCurrent) return;
+  const compatible = (stored: typeof existing[number]) => {
+    if (!info || stored.embeddingModel !== info.signature) return false;
+    try { return validVector(JSON.parse(stored.embedding || 'null'), info.dimensions); } catch { return false; }
+  };
+  if (unchanged && (!info || existing.every(compatible))) return Boolean(info);
 
-  if (!unchanged) await prisma.chatMessage.updateMany({ where: { conversation: { documentId } }, data: { sourceCitations: null } });
+  if (existing.length) await prisma.chatMessage.updateMany({ where: { conversation: { documentId } }, data: { sourceCitations: null } });
   const retainedIds: string[] = [];
   for (const chunk of chunks) {
-    const cached = existing.find(stored => stored.content === chunk.content && stored.pageNumber === chunk.pageNumber &&
-      stored.embeddingModel === RagService.embeddingModel && RagService.validVector(stored.embedding));
-    const vector = cached ? { embedding: cached.embedding, embeddingModel: cached.embeddingModel }
-      : (await RagService.embedChunks([chunk]))[0];
-    const data = { documentId, ...chunk, clauseHeading: chunk.clauseHeading || null, ...vector };
+    const cached = existing.find(stored => stored.content === chunk.content && stored.pageNumber === chunk.pageNumber && compatible(stored));
+    const embedding = cached?.embedding || (info ? JSON.stringify((await LocalEmbeddingService.embed([chunk.content]))[0]) : null);
+    const data = { documentId, ...chunk, clauseHeading: chunk.clauseHeading || null,
+      embedding, embeddingModel: info ? info.signature : null };
     const previous = existing.find(stored => stored.chunkIndex === chunk.chunkIndex);
     const stored = previous ? await prisma.documentChunk.update({ where: { id: previous.id }, data })
       : await prisma.documentChunk.create({ data });
@@ -44,8 +47,8 @@ async function persistIndexedChunks(documentId: string, chunks: Awaited<ReturnTy
 
   await prisma.$transaction([
     prisma.documentChunk.deleteMany({ where: { documentId, id: { notIn: retainedIds } } }),
-
   ]);
+  return Boolean(info);
 }
 
 export class DocumentController {
@@ -88,7 +91,7 @@ export class DocumentController {
         options
       );
 
-      // Persist extraction before any external embedding/analysis call so retries reuse successful pages.
+      // Persist extraction before shared local analysis so retries reuse successful pages.
       const contentHash = OcrCacheService.computeDocHash(filePath);
       await prisma.document.update({ where: { id: documentId }, data: {
         ocrMetadata: JSON.stringify({ ...extraction.ocrResult, analysisTextHash: previousAnalysisHash }), pageCount: extraction.pageCount,
@@ -135,10 +138,10 @@ export class DocumentController {
 
       // 2. Index page-aware chunks; unchanged content and model vectors are reused.
       if (jobId) {
-        JobQueueService.updateProgress(jobId, extraction.pageCount, extraction.pageCount, 'Creating overlapping page-aware chunks and generating embeddings...');
+        JobQueueService.updateProgress(jobId, extraction.pageCount, extraction.pageCount, 'Indexing page-aware chunks for retrieval...');
       }
       await prisma.document.update({ where: { id: documentId }, data: { ragStatus: 'INDEXING' } });
-      await persistIndexedChunks(documentId, extraction.chunks);
+      const semanticReady = await persistIndexedChunks(documentId, extraction.chunks);
 
       if (jobId) {
         JobQueueService.updateProgress(
@@ -155,10 +158,10 @@ export class DocumentController {
       if (!reuseAnalysis) {
         // 3. Run AI / Rule Engine Extractions
         const [summary, clauses, completeness, obligations] = await Promise.all([
-          AIAdapter.generateSummary(extraction.text, originalName),
-          AIAdapter.analyzeClauses(extraction.text),
-          AIAdapter.checkCompleteness(extraction.text, 'General Commercial Contract'),
-          AIAdapter.extractObligations(extraction.text),
+          LocalAnalysisService.generateSummary(extraction.text, originalName),
+          LocalAnalysisService.analyzeClauses(extraction.text),
+          LocalAnalysisService.checkCompleteness(extraction.text, 'General Commercial Contract'),
+          LocalAnalysisService.extractObligations(extraction.text),
         ]);
 
         // Save all analyses and their input hash atomically; a failed stage remains retryable.
@@ -270,7 +273,7 @@ export class DocumentController {
         where: { id: documentId },
         data: {
           status: 'COMPLETED',
-          ragStatus: RagService.embeddingEnabled ? 'READY' : 'KEYWORD_READY',
+          ragStatus: semanticReady ? 'READY' : 'KEYWORD_READY',
           ocrStatus,
           ocrMetadata: JSON.stringify({ ...extraction.ocrResult, analysisTextHash: analysisHash }),
           pageCount: extraction.pageCount,
@@ -604,7 +607,7 @@ export class DocumentController {
         return;
       }
 
-      const freshSummary = await AIAdapter.generateSummary(doc.extractedText, doc.originalName);
+      const freshSummary = await LocalAnalysisService.generateSummary(doc.extractedText, doc.originalName);
 
       const updated = await prisma.contractSummary.upsert({
         where: { documentId: id },
@@ -851,34 +854,18 @@ export class DocumentController {
         },
       });
 
-      // Fetch Document Chunks for Retrieval Grounding
-      const chunks = await prisma.documentChunk.findMany({
-        where: authorizedChunkFilter(id, userId),
-        orderBy: { chunkIndex: 'asc' },
-      });
-
-      if (!chunks.length) {
+      const retrievalStartedAt = performance.now();
+      const retrieval = await RagService.searchAuthorized(question.trim(), { userId, documentIds: [id] });
+      if (!retrieval.stats.candidateCount && !await prisma.documentChunk.count({ where: { documentId: id, document: { userId } } })) {
         res.status(409).json({ error: 'No usable text has been indexed for this document. Review OCR or retry processing.' });
         return;
       }
 
-      if (RagService.embeddingEnabled && chunks.some(c => c.embeddingModel !== RagService.embeddingModel || !RagService.validVector(c.embedding))) {
-        res.status(409).json({ error: 'The embedding index needs rebuilding for the current model. Use Retry processing in OCR Preview.' }); return;
-      }
-      const retrievalStartedAt = performance.now();
-      const retrieved = await RagService.retrieve(question.trim(), chunks);
       const retrievalLatencyMs = Math.round(performance.now() - retrievalStartedAt);
-      const ocrMeta = document.ocrMetadata ? JSON.parse(document.ocrMetadata) : null;
-      const lowConfidencePages = new Set<number>(
-        (ocrMeta?.pages || []).filter((page: any) => page.hasLowConfidence || page.flagged).map((page: any) => page.pageNumber)
-      );
-      const evidence = retrieved.map((chunk) => ({
-        ...chunk,
-        lowConfidence: lowConfidencePages.has(chunk.pageNumber),
-      }));
+      const evidence = retrieval.chunks;
 
       // Get Grounded Answer
-      const answerResult = await AIAdapter.answerQuestion(question.trim(), evidence, [], document.originalName);
+      const answerResult = await LocalAnalysisService.answerQuestion(question.trim(), evidence, [], document.originalName);
 
       // Lock the document revision while saving: indexing invalidates old citations after this lock.
       const assistantMsg = await prisma.$transaction(async tx => {
@@ -899,13 +886,15 @@ export class DocumentController {
         isDocumentGrounded: answerResult.isDocumentGrounded,
         provider: answerResult.provider,
         insufficientEvidence: answerResult.insufficientEvidence,
-        retrievalMode: answerResult.retrievalMode || 'keyword_fallback',
+        retrievalMode: retrieval.stats.mode,
+        retrieval: retrieval.stats,
         metrics: {
           retrievalLatencyMs,
           totalResponseTimeMs: Math.round(performance.now() - requestStartedAt),
         },
       });
     } catch (error: any) {
+      if (error instanceof RetrievalError) { res.status(error.status).json({ error: error.message }); return; }
       console.error('Document chat failed.');
       res.status(500).json({ error: 'Failed to process question.' });
     }

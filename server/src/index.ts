@@ -8,6 +8,10 @@ import documentRoutes from './routes/document.routes.js';
 import templateRoutes from './routes/template.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import { PaddleOcrService } from './services/ocr/paddle-ocr.service.js';
+import { LocalEmbeddingService } from './services/local-embedding.service.js';
+import { loggerService } from './services/logger.service.js';
+import logsRoutes from './routes/logs.routes.js';
+import { getDashboardHtml } from './views/dashboard.html.js';
 
 const app = express();
 
@@ -21,6 +25,20 @@ app.use(
 
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
+
+// Capture HTTP activity in the real-time logs dashboard
+app.use(loggerService.httpLoggerMiddleware());
+
+// Interactive Dashboard & Log Stream UI
+app.get('/', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(getDashboardHtml());
+});
+app.get('/logs', (_req, res) => res.redirect('/'));
+app.get('/dashboard', (_req, res) => res.redirect('/'));
+
+// Logs and Server Telemetry API
+app.use(logsRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {
@@ -60,7 +78,7 @@ app.listen(PORT, () => {
 });
 
 // Shut the OCR worker down cleanly on process exit.
-const shutdownOcr = () => PaddleOcrService.shutdown();
+const shutdownOcr = () => { PaddleOcrService.shutdown(); LocalEmbeddingService.shutdown(); };
 process.on('SIGINT', () => {
   shutdownOcr();
   process.exit(0);

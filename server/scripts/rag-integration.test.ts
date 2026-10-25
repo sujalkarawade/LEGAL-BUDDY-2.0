@@ -1,18 +1,21 @@
-import { after, before, it, mock } from 'node:test';
+﻿import { after, before, it, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import type { Server } from 'node:http';
 // Deterministic integration tests never send contract text to a live provider.
-for (const name of ['GEMINI_API_KEY', 'LLM_API_KEY', 'GROQ_API_KEY', 'OPENAI_API_KEY']) process.env[name] = '';
 process.env.AI_PROVIDER = 'heuristic';
+process.env.GROQ_API_KEY = '';
+process.env.OPENROUTER_API_KEY = '';
+process.env.RAG_EMBEDDING_ENABLED = 'false';
 const { default: express } = await import('express');
 const { default: jwt } = await import('jsonwebtoken');
 const { default: prisma } = await import('../src/prisma/client.js');
 const { default: routes } = await import('../src/routes/document.routes.js');
 const { JWT_SECRET } = await import('../src/config/index.js');
 const { RagService, authorizedChunkFilter } = await import('../src/services/rag.service.js');
-const { AIAdapter } = await import('../src/services/ai/ai-adapter.js');
+const { LocalEmbeddingService } = await import('../src/services/local-embedding.service.js');
+const { LocalAnalysisService } = await import('../src/services/local-analysis.service.js');
 const { DocumentController } = await import('../src/controllers/document.controller.js');
 const { JobQueueService } = await import('../src/services/job-queue.service.js');
 const { validateGroundedAnswer } = await import('../src/services/grounded-answer.js');
@@ -40,7 +43,7 @@ before(async () => {
   for (const [id, userId] of [[docA, userA], [docB, userB]]) {
     await prisma.document.create({ data: { id, userId, originalName: 'Test.pdf', storedName: `${id}.pdf`,
       filePath: 'not-a-real-file', fileSize: 0, mimeType: 'application/pdf', status: 'COMPLETED', ragStatus: 'KEYWORD_READY', pageCount: 1,
-      chunks: { create: { chunkIndex: 0, pageNumber: 1, content: userId === userA ? '7.2 Payment is INR 500.' : 'SECRET USER B: Payment is INR 900000.' } } } });
+      chunks: { create: { chunkIndex: 0, pageNumber: 1, embedding: '[1,0,0]', embeddingModel: 'collection:3:v1', content: userId === userA ? '7.2 Payment is INR 500.' : 'SECRET USER B: Payment is INR 900000.' } } } });
   }
   clauseB = (await prisma.clauseFinding.create({ data: { documentId: docB, category: 'Payment', title: 'Private', excerpt: 'Secret', plainLanguageExplanation: 'Private', riskLevel: 'Low' } })).id;
   checkB = (await prisma.completenessCheck.create({ data: { documentId: docB, expectedSection: 'Secret', status: 'FOUND', reason: 'Private' } })).id;
@@ -50,6 +53,7 @@ before(async () => {
   base = `http://127.0.0.1:${(server.address() as { port: number }).port}/documents`;
 });
 after(async () => {
+  LocalEmbeddingService.shutdown();
   if (server) await new Promise<void>(resolve => server.close(() => resolve()));
   await prisma.user.deleteMany({ where: { id: { in: [userA, userB] } } });
   for (const file of filePaths) if (fs.existsSync(file)) fs.unlinkSync(file);
@@ -71,6 +75,39 @@ it('scopes actual database retrieval by both owner and document', async () => {
   const chunks = await prisma.documentChunk.findMany({ where: authorizedChunkFilter(docA, userA) });
   assert.equal(chunks.length, 1); assert.ok(!chunks[0].content.includes('SECRET'));
 });
+it('retrieves an explicitly permitted collection with source names, owner IDs, pages and OCR flags', async () => {
+  const docC = randomUUID();
+  const enabled = mock.method(LocalEmbeddingService, 'enabled', () => true, { getter: true });
+  const info = mock.method(LocalEmbeddingService, 'getInfo', async () => ({ signature: 'collection:3:v1', dimensions: 3 }));
+  const embed = mock.method(LocalEmbeddingService, 'embed', async () => [[1, 0, 0]]);
+  await prisma.document.create({ data: { id: docC, userId: userA, originalName: 'Second.pdf', storedName: docC + '.pdf',
+    filePath: 'test-only', mimeType: 'application/pdf', fileSize: 0, status: 'COMPLETED', ragStatus: 'KEYWORD_READY',
+    ocrMetadata: JSON.stringify({ pages: [{ pageNumber: 9, flagged: true, hasLowConfidence: true }] }),
+    chunks: { create: { chunkIndex: 0, pageNumber: 9, content: 'Payment fee INR 1000.', extractionMethod: 'paddle_ocr', embedding: '[1,0,0]', embeddingModel: 'collection:3:v1' } } } });
+  try {
+    for (const mode of ['keyword', 'semantic', 'hybrid'] as const) for (const rerank of [false, true]) {
+      const result = await RagService.searchAuthorized('payment', { userId: userA, documentIds: [docA, docC] }, { mode, rerank });
+      assert.equal(result.chunks.length, 2);
+      assert.ok(result.chunks.every(c => c.ownerId === userA && [docA, docC].includes(c.documentId) && !c.content.includes('SECRET')));
+      const scanned = result.chunks.find(c => c.documentId === docC)!;
+      assert.equal(scanned.pageNumber, 9); assert.equal(scanned.documentName, 'Second.pdf');
+      assert.equal(scanned.lowConfidence, true); assert.deepEqual(scanned.ocrReviewFlags, ['low_confidence', 'flagged']);
+      const answer = validateGroundedAnswer(JSON.stringify({ answer: 'The payment is INR 1000.', insufficientEvidence: false,
+        sources: [{ chunkId: scanned.id, excerpt: 'INR 1000' }] }), result.chunks, 'Wrong.pdf');
+      assert.equal(answer.citations[0].documentName, 'Second.pdf'); assert.equal(answer.citations[0].documentId, docC);
+    }
+    await assert.rejects(RagService.searchAuthorized('payment', { userId: userA, documentIds: [docA, docB] }), (e: any) => e.status === 404);
+    await assert.rejects(RagService.searchAuthorized('payment', { userId: userA, documentIds: [docA, docA] }), (e: any) => e.status === 400);
+    await assert.rejects(RagService.searchAuthorized('payment', { userId: userB, documentIds: [docC] }), (e: any) => e.status === 404);
+  } finally { enabled.mock.restore(); info.mock.restore(); embed.mock.restore(); await prisma.document.delete({ where: { id: docC } }); }
+});
+it('rejects unauthorized collections before starting any embedding or ranking work', async () => {
+  const search = mock.method(RagService, 'search', async () => { throw new Error('Ranking must not run'); });
+  try {
+    await assert.rejects(RagService.searchAuthorized('private payment', { userId: userA, documentIds: [docB] }), (e: any) => e.status === 404);
+    assert.equal(search.mock.callCount(), 0);
+  } finally { search.mock.restore(); }
+});
 it('blocks nested review IDs from another document', async () => {
   for (const [suffix, body] of [[`clauses/${clauseB}`, { reviewStatus: 'APPROVED' }],
     [`completeness/${checkB}`, { isReviewed: true }], [`obligations/${obligationB}`, { reviewStatus: 'ACKNOWLEDGED' }]] as const) {
@@ -85,7 +122,7 @@ it('protects background job metadata from other users', async () => {
   assert.equal((await request(`/jobs/${job.id}`)).status, 404);
 });
 it('passes only authorized retrieved passages into answer generation and saves verified citations', async () => {
-  const answer = mock.method(AIAdapter, 'answerQuestion', async (_question, chunks, _history, name) => {
+  const answer = mock.method(LocalAnalysisService, 'answerQuestion', async (_question, chunks, _history, name) => {
     assert.ok(chunks.every(c => !c.content.includes('SECRET')));
     return validateGroundedAnswer(JSON.stringify({ answer: 'Payment is INR 500.', insufficientEvidence: false,
       sources: [{ chunkId: chunks[0].id, excerpt: 'INR 500' }] }), chunks, name!);
@@ -118,7 +155,7 @@ it('processes a real selectable PDF asynchronously and preserves analysis featur
   assert.ok(doc.chunks.every(c => c.pageNumber >= 1 && c.pageNumber <= 2));
 });
 it('retrieves and cites the actual extracted NDA payment-cap passage on page 2', async () => {
-  const answer = mock.method(AIAdapter, 'answerQuestion', async (_question, chunks, _history, name) => {
+  const answer = mock.method(LocalAnalysisService, 'answerQuestion', async (_question, chunks, _history, name) => {
     const source = chunks.find(c => c.pageNumber === 2 && c.content.includes('$50,000'));
     assert.ok(source, 'Actual extracted source must be retrieved');
     return validateGroundedAnswer(JSON.stringify({ answer: 'The cap is $50,000.', insufficientEvidence: false,
@@ -136,7 +173,7 @@ it('retrieves and cites the actual extracted NDA payment-cap passage on page 2',
 });
 it('propagates uncertain page metadata to generation and citations', async () => {
   await prisma.document.update({ where: { id: docA }, data: { ocrMetadata: JSON.stringify({ pages: [{ pageNumber: 1, flagged: true, hasLowConfidence: true }] }) } });
-  const answer = mock.method(AIAdapter, 'answerQuestion', async (_question, chunks, _history, name) => {
+  const answer = mock.method(LocalAnalysisService, 'answerQuestion', async (_question, chunks, _history, name) => {
     assert.ok(chunks[0].lowConfidence);
     return validateGroundedAnswer(JSON.stringify({ answer: 'Payment is INR 500.', insufficientEvidence: false,
       sources: [{ chunkId: chunks[0].id, excerpt: 'INR 500' }] }), chunks, name!);
@@ -192,23 +229,27 @@ it('redacts extraction exceptions in sync responses, jobs, stored errors and log
     assert.ok(!JSON.stringify(log.mock.calls).includes(secret));
   } finally { extract.mock.restore(); log.mock.restore(); }
 });
-it('embedding failure prevents readiness and retry reuses completed embedding work', async () => {
+it('checkpoints local vectors, retries failed indexing, reuses unchanged embeddings and replaces changed text vectors', async () => {
   const doc = await prisma.document.findUniqueOrThrow({ where: { id: uploadedId } });
   const meta = JSON.parse(doc.ocrMetadata!);
   const { PdfService } = await import('../src/services/pdf-service.js');
   const extraction = { text: doc.extractedText!, pageCount: doc.pageCount, chunks: PdfService.chunkPages(meta.pages), isScannedOrEmpty: false, ocrResult: meta };
-  const enabled = mock.method(RagService, 'embeddingEnabled', () => true, { getter: true });
-  let calls = 0, fail = true;
-  const embed = mock.method(RagService, 'embed', async () => { calls++; if (fail && calls === 2) throw new Error('Transient test failure'); return Array(768).fill(1); });
+  const info = mock.method(LocalEmbeddingService, 'getInfo', async () => ({ signature: 'integration:3:v1', dimensions: 3 }));
+  let fail = true, calls = 0;
+  const embed = mock.method(LocalEmbeddingService, 'embed', async () => { calls++; if (fail && calls === 2) throw new Error('Synthetic indexing outage'); return [[1, 0, 0]]; });
   try {
     await assert.rejects(DocumentController.processDocumentAsync(uploadedId, doc.filePath, doc.originalName, undefined, { extraction }));
     assert.equal((await prisma.document.findUniqueOrThrow({ where: { id: uploadedId } })).ragStatus, 'FAILED');
-    assert.equal((await request(`/${uploadedId}/chat`, userA, 'POST', { question: 'payment' })).status, 409);
     fail = false;
-    const completed = await DocumentController.processDocumentAsync(uploadedId, doc.filePath, doc.originalName, undefined, { extraction });
-    assert.equal(completed.document.ragStatus, 'READY');
-    assert.equal(calls, extraction.chunks.length + 1); // Failed call retried, successful first chunk reused.
-  } finally { embed.mock.restore(); enabled.mock.restore(); }
+    const result = await DocumentController.processDocumentAsync(uploadedId, doc.filePath, doc.originalName, undefined, { extraction });
+    assert.equal(result.document.ragStatus, 'READY');
+    assert.equal(calls, extraction.chunks.length + 1);
+    await DocumentController.processDocumentAsync(uploadedId, doc.filePath, doc.originalName, undefined, { extraction });
+    assert.equal(calls, extraction.chunks.length + 1, 'Unchanged vectors must be reused');
+    const changed = { ...extraction, chunks: extraction.chunks.map((c, i) => i === 0 ? { ...c, content: c.content + ' Updated clause.' } : c) };
+    await DocumentController.processDocumentAsync(uploadedId, doc.filePath, doc.originalName, undefined, { extraction: changed });
+    assert.equal(calls, extraction.chunks.length + 2);
+  } finally { info.mock.restore(); embed.mock.restore(); }
 });
 it('a missing OCR page keeps the whole document out of ready state', async () => {
   const conversation = await prisma.chatConversation.create({ data: { documentId: uploadedId, userId: userA } });
@@ -234,17 +275,9 @@ it('no chunks can never produce a ready document, even if an extraction flag is 
   assert.equal(result.document.ragStatus, 'REVIEW_REQUIRED');
   assert.equal((await request(`/${uploadedId}/chat`, userA, 'POST', { question: 'Payment' })).status, 409);
 });
-it('rejects stale embedding models before answering', async () => {
-  const enabled = mock.method(RagService, 'embeddingEnabled', () => true, { getter: true });
-  try {
-    const response = await request(`/${docA}/chat`, userA, 'POST', { question: 'Payment?' });
-    assert.equal(response.status, 409);
-    assert.match((await response.json() as any).error, /rebuilding/);
-  } finally { enabled.mock.restore(); }
-});
 it('does not save an answer if the document changes during generation', async () => {
   const beforeCount = await prisma.chatMessage.count({ where: { conversation: { documentId: docA }, role: 'assistant' } });
-  const answer = mock.method(AIAdapter, 'answerQuestion', async (_question, chunks, _history, name) => {
+  const answer = mock.method(LocalAnalysisService, 'answerQuestion', async (_question, chunks, _history, name) => {
     await prisma.document.update({ where: { id: docA }, data: { status: 'PROCESSING', ragStatus: 'INDEXING' } });
     return validateGroundedAnswer(JSON.stringify({ answer: 'Payment is INR 500.', insufficientEvidence: false,
       sources: [{ chunkId: chunks[0].id, excerpt: 'INR 500' }] }), chunks, name!);
@@ -254,4 +287,28 @@ it('does not save an answer if the document changes during generation', async ()
     assert.equal(response.status, 409);
     assert.equal(await prisma.chatMessage.count({ where: { conversation: { documentId: docA }, role: 'assistant' } }), beforeCount);
   } finally { answer.mock.restore(); }
+});
+it('indexes actual local embeddings and searches the extracted PDF through PostgreSQL with and without reranking',
+  { skip: !fs.existsSync('models/all-MiniLM-L6-v2/model.safetensors') }, async () => {
+  const id = randomUUID();
+  const enabled = mock.method(LocalEmbeddingService, 'enabled', () => true, { getter: true });
+  await prisma.document.create({ data: { id, userId: userA, originalName: 'Local-NDA.pdf', storedName: id + '.pdf',
+    filePath: 'sample_contracts/sample_nda.pdf', fileSize: 0, mimeType: 'application/pdf' } });
+  try {
+    const result = await DocumentController.processDocumentAsync(id, 'sample_contracts/sample_nda.pdf', 'Local-NDA.pdf');
+    assert.equal(result.document.ragStatus, 'READY');
+    const stored = await prisma.documentChunk.findMany({ where: { documentId: id } });
+    assert.ok(stored.every(c => c.embeddingModel?.startsWith('local-st:') && JSON.parse(c.embedding!).length === 384));
+    for (const mode of ['semantic', 'hybrid'] as const) for (const rerank of [false, true]) {
+      const search = await RagService.searchAuthorized('What is the liability cap?', { userId: userA, documentIds: [id] }, { mode, rerank });
+      assert.equal(search.stats.semanticStatus, 'available');
+      assert.ok(search.chunks.some(c => c.pageNumber === 2 && c.content.includes('$50,000')));
+      assert.ok(search.chunks.every(c => c.documentId === id && c.ownerId === userA));
+      const noGenerator = await LocalAnalysisService.answerQuestion('Which Antarctic court has jurisdiction?', search.chunks);
+      assert.equal(noGenerator.insufficientEvidence, true); assert.deepEqual(noGenerator.citations, []);
+    }
+  } finally {
+    enabled.mock.restore(); LocalEmbeddingService.shutdown();
+    await prisma.document.delete({ where: { id } });
+  }
 });

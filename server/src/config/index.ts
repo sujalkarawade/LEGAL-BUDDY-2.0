@@ -12,13 +12,6 @@ if (process.env.NODE_ENV === 'production' && (!process.env.JWT_SECRET || process
 }
 export const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
-export const AI_PROVIDER = process.env.AI_PROVIDER || 'auto';
-export const GROQ_API_KEY = process.env.LLM_API_KEY || process.env.GROQ_API_KEY || '';
-export const LLM_MODEL = process.env.LLM_MODEL || 'meta-llama/llama-3.3-70b-instruct';
-export const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-export const GEMINI_CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || 'gemini-2.5-flash';
-export const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
-export const RAG_EMBEDDING_MODEL = process.env.RAG_EMBEDDING_MODEL || 'gemini-embedding-001';
 function integerSetting(name: string, fallback: number, min: number, max: number): number {
   const value = Number(process.env[name] ?? fallback);
   if (!Number.isInteger(value) || value < min || value > max) throw new Error(`Invalid ${name}: expected an integer from ${min} to ${max}.`);
@@ -27,7 +20,34 @@ function integerSetting(name: string, fallback: number, min: number, max: number
 export const RAG_CHUNK_SIZE = integerSetting('RAG_CHUNK_SIZE', 1500, 300, 3000);
 export const RAG_CHUNK_OVERLAP = integerSetting('RAG_CHUNK_OVERLAP', 180, 0, Math.floor(RAG_CHUNK_SIZE / 2));
 export const RAG_RETRIEVAL_LIMIT = integerSetting('RAG_RETRIEVAL_LIMIT', 5, 1, 10);
-export const RAG_EMBEDDING_VERSION = `${RAG_EMBEDDING_MODEL}:768:retrieval-v1`;
+
+function booleanSetting(name: string, fallback: boolean): boolean {
+  const value = process.env[name];
+  if (value === undefined) return fallback;
+  if (value !== 'true' && value !== 'false') throw new Error('Invalid ' + name + ': expected true or false.');
+  return value === 'true';
+}
+export const RAG_SEARCH_MODE = process.env.RAG_SEARCH_MODE || 'hybrid';
+if (!['hybrid', 'semantic', 'keyword'].includes(RAG_SEARCH_MODE)) throw new Error('Invalid RAG_SEARCH_MODE.');
+export const RAG_CANDIDATE_LIMIT = integerSetting('RAG_CANDIDATE_LIMIT', 24, 10, 100);
+export const RAG_RRF_K = integerSetting('RAG_RRF_K', 60, 1, 1000);
+export const RAG_RERANK_ENABLED = booleanSetting('RAG_RERANK_ENABLED', false);
+export const RAG_RERANK_TIMEOUT_MS = integerSetting('RAG_RERANK_TIMEOUT_MS', 40, 1, 5000);
+export const RAG_SEARCH_TIMEOUT_MS = integerSetting('RAG_SEARCH_TIMEOUT_MS', 5000, 50, 30000);
+export const RAG_MAX_CHUNKS = integerSetting('RAG_MAX_CHUNKS', 20000, 100, 100000);
+export const RAG_LOG_METRICS = booleanSetting('RAG_LOG_METRICS', false);
+export const RAG_EMBEDDING_MODEL_PATH = path.resolve(process.cwd(), process.env.RAG_EMBEDDING_MODEL_PATH || 'models/all-MiniLM-L6-v2');
+export const RAG_EMBEDDING_ENABLED = booleanSetting('RAG_EMBEDDING_ENABLED', fs.existsSync(RAG_EMBEDDING_MODEL_PATH));
+export const RAG_EMBEDDING_PYTHON = process.env.RAG_EMBEDDING_PYTHON || process.env.OCR_PYTHON || 'python';
+export const RAG_EMBEDDING_STARTUP_MS = integerSetting('RAG_EMBEDDING_STARTUP_MS', 120000, 1000, 300000);
+export const RAG_EMBEDDING_TIMEOUT_MS = integerSetting('RAG_EMBEDDING_TIMEOUT_MS', 30000, 50, 120000);
+
+// AI Provider settings
+export const AI_PROVIDER = process.env.AI_PROVIDER || 'auto';
+export const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
+export const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
+export const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
+export const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'meta-llama/llama-3.3-70b-instruct';
 
 export const MAX_FILE_SIZE_MB = parseInt(process.env.MAX_FILE_SIZE_MB || '15', 10);
 export const UPLOAD_DIR = path.resolve(process.cwd(), process.env.UPLOAD_DIR || './uploads');

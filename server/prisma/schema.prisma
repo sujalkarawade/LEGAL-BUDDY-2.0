@@ -64,7 +64,7 @@ model DocumentChunk {
   content           String   @db.Text
   extractionMethod  String   @default("selectable")
   clauseHeading     String?
-  embedding         String?  @db.Text // JSON float array; model is recorded separately
+  embedding         String?  @db.Text // JSON vector; embeddingModel stores local model fingerprint/dimensions/pooling version
   embeddingModel    String?
   createdAt         DateTime @default(now())
 
@@ -90,7 +90,7 @@ model ContractSummary {
   importantDeadlines    String?  @db.Text
   missingInfo           String?  @db.Text
   rawSummary            String?  @db.Text
-  analysisProvider      String   @default("rule_engine") // gemini, openai, rule_engine
+  analysisProvider      String   @default("rule_engine") // local rule engine
   createdAt             DateTime @default(now())
 
   @@map("contract_summaries")

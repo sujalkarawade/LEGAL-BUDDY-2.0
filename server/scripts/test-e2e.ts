@@ -302,7 +302,7 @@ export async function runTests() {
   );
 
   fs.writeFileSync(process.env.TEST_RESULTS_PATH || 'evaluations/last-e2e-results.json', JSON.stringify({
-    executedAt: new Date().toISOString(), mode: process.env.TEST_PROVIDER_MODE || 'configured-server', passedTests, totalTests, checks,
+    executedAt: new Date().toISOString(), mode: process.env.TEST_ANALYSIS_MODE || 'local-rule-engine', passedTests, totalTests, checks,
   }, null, 2));
   if (passedTests !== totalTests) process.exitCode = 1;
   console.log(`\n=======================================================`);

@@ -1,0 +1,36 @@
+{
+  "notice": "Synthetic legal passages with manually assigned relevant chunk IDs. These do not measure production legal accuracy or OCR recognition accuracy.",
+  "chunks": [
+    { "id": "law72", "documentId": "commercial", "pageNumber": 4, "clauseHeading": "7.2 Governing Law", "content": "7.2 Governing Law. This Agreement is governed by the laws of Maharashtra." },
+    { "id": "law720", "documentId": "commercial", "pageNumber": 5, "clauseHeading": "7.20 Arbitration", "content": "7.20 Arbitration. Disputes are settled by arbitration in Mumbai under the applicable arbitration legislation." },
+    { "id": "effective", "documentId": "commercial", "pageNumber": 1, "clauseHeading": "Effective Date", "content": "This Agreement becomes effective on 2026-04-01. The annual fee is INR 240,000 payable on that date." },
+    { "id": "otherdate", "documentId": "commercial", "pageNumber": 2, "clauseHeading": "Renewal", "content": "The renewal date is 2027-04-01. Renewal payment is INR 260,000." },
+    { "id": "parties", "documentId": "commercial", "pageNumber": 1, "clauseHeading": "Parties", "content": "Acme Holdings shall deliver the equipment. Orion Services shall pay the purchase price." },
+    { "id": "indemnity", "documentId": "commercial", "pageNumber": 7, "clauseHeading": "Indemnification", "content": "The Supplier shall indemnify the Customer against third-party intellectual property infringement claims." },
+    { "id": "insurance", "documentId": "commercial", "pageNumber": 8, "clauseHeading": "Insurance", "content": "The Supplier shall maintain professional liability insurance of INR 2,000,000 and retain certificates." },
+    { "id": "force", "documentId": "commercial", "pageNumber": 9, "clauseHeading": "Force Majeure", "content": "Neither party is liable for delays caused by natural disasters beyond its reasonable control. The affected party must promptly notify the other party." },
+    { "id": "credit-incidental", "documentId": "commercial", "pageNumber": 10, "clauseHeading": null, "content": "Service quality issues are discussed at the monthly review. Separate credit terms are specified in a schedule." },
+    { "id": "credit", "documentId": "commercial", "pageNumber": 11, "clauseHeading": "Service Credit", "content": "Service Credit. A service credit of INR 500 applies for each hour of unplanned downtime." },
+    { "id": "termination30", "documentId": "conflict", "pageNumber": 3, "clauseHeading": "Termination", "content": "Termination requires thirty days written notice from either party." },
+    { "id": "termination60", "documentId": "conflict", "pageNumber": 11, "clauseHeading": "Schedule B: Termination", "content": "Termination requires sixty days written notice from either party." },
+    { "id": "cure", "documentId": "long", "pageNumber": 58, "clauseHeading": "Breach and Cure", "content": "Following written notice of breach, the defaulting party has thirty days to remedy the breach before termination." },
+    { "id": "marathi", "documentId": "scan", "pageNumber": 2, "clauseHeading": null, "extractionMethod": "paddle_ocr", "lowConfidence": true, "ocrReviewFlags": ["flagged"], "content": "विलंब दंड INR 5,000 देय आहे. Payment must be made within fifteen days." },
+    { "id": "ocr", "documentId": "scan", "pageNumber": 5, "clauseHeading": "Penalty", "extractionMethod": "paddle_ocr", "lowConfidence": true, "ocrReviewFlags": ["low_confidence"], "content": "Penalty amount: INR 5?000. The scanned amount is unclear and must be verified against the original image." }
+  ],
+  "cases": [
+    { "id": "exact-clause", "documentIds": ["commercial"], "question": "What does section 7.2 say?", "relevantIds": ["law72"] },
+    { "id": "exact-date", "documentIds": ["commercial"], "question": "What becomes effective on 2026-04-01?", "relevantIds": ["effective"] },
+    { "id": "exact-amount", "documentIds": ["commercial"], "question": "What is the annual fee INR 240000?", "relevantIds": ["effective"] },
+    { "id": "exact-party", "documentIds": ["commercial"], "question": "What must \"Acme Holdings\" deliver?", "relevantIds": ["parties"] },
+    { "id": "exact-legal-term", "documentIds": ["commercial"], "question": "Explain force majeure", "relevantIds": ["force"] },
+    { "id": "paraphrase-indemnity", "documentIds": ["commercial"], "question": "Who protects us if another company sues us over a patent?", "relevantIds": ["indemnity"] },
+    { "id": "paraphrase-disaster", "documentIds": ["commercial"], "question": "Can an earthquake excuse a delay?", "relevantIds": ["force"] },
+    { "id": "long-document-paraphrase", "documentIds": ["long"], "question": "How many days are allowed to fix a violation after receiving a written warning?", "relevantIds": ["cure"] },
+    { "id": "heading", "documentIds": ["commercial"], "question": "What service credit applies?", "relevantIds": ["credit"] },
+    { "id": "conflicting-terms", "documentIds": ["conflict"], "question": "What is the termination notice period?", "relevantIds": ["termination30", "termination60"] },
+    { "id": "permitted-collection", "documentIds": ["commercial", "conflict"], "question": "What written termination notice is required?", "relevantIds": ["termination30", "termination60"] },
+    { "id": "marathi-exact-ocr-text", "documentIds": ["scan"], "question": "विलंब दंड किती आहे?", "relevantIds": ["marathi"] },
+    { "id": "uncertain-ocr", "documentIds": ["scan"], "question": "Is the penalty amount clear in the scanned image?", "relevantIds": ["ocr"] },
+    { "id": "absent", "documentIds": ["commercial"], "question": "Which Antarctic court has jurisdiction over satellite launches?", "relevantIds": [] }
+  ]
+}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
 import {
@@ -11,7 +11,6 @@ import {
   ChevronDown,
   Activity,
 } from 'lucide-react';
-import ApiService from '../../services/api.js';
 
 export const Navbar: React.FC<{ sidebarCollapsed: boolean; onToggleSidebar: () => void }> = ({
   sidebarCollapsed,
@@ -19,15 +18,9 @@ export const Navbar: React.FC<{ sidebarCollapsed: boolean; onToggleSidebar: () =
 }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [systemStatus, setSystemStatus] = useState<any>(null);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
-  useEffect(() => {
-    ApiService.getSystemStatus()
-      .then((data) => setSystemStatus(data))
-      .catch((err) => console.warn('Status fetch failed:', err));
-  }, []);
 
   const getInitials = (name: string) => {
     return name
@@ -69,7 +62,7 @@ export const Navbar: React.FC<{ sidebarCollapsed: boolean; onToggleSidebar: () =
             <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400"></span>
           </span>
           <span className="hidden md:inline">
-            {systemStatus?.aiStatus?.isLiveLlm ? 'Live Neural LLM' : 'Heuristic Legal Engine'}
+            Local Legal Rules
           </span>
           <Info className="h-3.5 w-3.5 text-white/70" />
         </button>
@@ -168,18 +161,8 @@ export const Navbar: React.FC<{ sidebarCollapsed: boolean; onToggleSidebar: () =
             <div className="mt-5 space-y-4 text-xs">
               <div className="border-2 border-[#0a0a0a] bg-[#f9f9f9] p-3">
                 <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 font-mono">Active Engine</span>
-                <p className="text-xs font-black uppercase text-[#0a0a0a] mt-0.5">
-                  {systemStatus?.aiStatus?.activeProvider === 'groq'
-                    ? `Neural AI Engine — ${systemStatus?.aiStatus?.model?.replace(/\s*\(Groq LPU\)/gi, '') || 'Llama 3.3 70B'}`
-                    : systemStatus?.aiStatus?.activeProvider === 'gemini'
-                    ? 'Google Gemini 1.5 Flash (Live API)'
-                    : systemStatus?.aiStatus?.activeProvider === 'openai'
-                    ? 'OpenAI GPT-4o Mini (Live API)'
-                    : 'Deterministic Heuristic Legal Engine'}
-                </p>
-                <p className="text-gray-600 mt-1.5 leading-relaxed text-[11px]">
-                  {systemStatus?.aiStatus?.notice?.replace(/GROQ — /gi, '')?.replace(/\(Groq LPU\)/gi, '') || 'System operating in normal baseline mode.'}
-                </p>
+                <p className="text-xs font-black uppercase text-[#0a0a0a] mt-0.5">Local Rule-Based Analysis</p>
+                <p className="text-gray-600 mt-1.5 leading-relaxed text-[11px]">External model services are currently disabled.</p>
               </div>
 
               <div className="border-2 border-[#0a0a0a] bg-[#f9f9f9] p-3">

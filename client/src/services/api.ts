@@ -240,7 +240,7 @@ class ApiService {
     citations: ChatCitation[];
     isDocumentGrounded: boolean;
     provider: string;
-    retrievalMode: 'semantic_hybrid' | 'keyword_fallback';
+    retrievalMode: 'semantic_hybrid' | 'semantic' | 'keyword_fallback';
     metrics: { retrievalLatencyMs: number; totalResponseTimeMs: number };
   }> {
     return this.request(`/documents/${documentId}/chat`, {

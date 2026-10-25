@@ -166,12 +166,6 @@ LEGAL BUDDY 2.0/
    JWT_SECRET="replace-with-a-long-random-secret"
    JWT_EXPIRES_IN="7d"
 
-   # AI Provider Configuration (Groq Llama 3.3 70B recommended)
-   AI_PROVIDER="auto"
-   GROQ_API_KEY="gsk_your_groq_api_key_here"
-   LLM_MODEL="meta-llama/llama-3.3-70b-instruct"
-   GEMINI_API_KEY=""
-   OPENAI_API_KEY=""
    MAX_FILE_SIZE_MB=15
    UPLOAD_DIR="./uploads"
    CLIENT_URL="http://localhost:5173"
@@ -226,36 +220,26 @@ npm run dev
 
 ---
 
-## 🤖 AI Provider Configuration
+## Document analysis
 
-Legal Buddy features a flexible AI Adapter supporting **Google Gemini**, **OpenAI**, and an **Offline Deterministic Legal Rule Engine**:
+The current build preserves shared PDF/OCR processing and the existing answer integration. Retrieval combines local CPU semantic embeddings with BM25 using Reciprocal Rank Fusion, with optional local reranking and explicit keyword fallback. Citation metadata is resolved and validated on the server.
 
-1. **Deterministic Rule Engine (Offline / Default)**:
-   - If no API key is provided, the platform automatically utilizes a comprehensive legal rule engine that extracts operative clauses, performs regex pattern matching, checks completeness checklists, and grounds RAG chat in extracted contract text.
-   - The UI clearly displays a badge indicating that the **Heuristic Legal Engine** is active.
-2. **Google Gemini (Recommended)**:
-   - Set `GEMINI_API_KEY="your-gemini-key"` in `server/.env`.
-   - The platform will leverage `gemini-1.5-flash` for high-speed generative summaries, structured clause extraction, and document-grounded responses.
-3. **OpenAI**:
-   - Set `OPENAI_API_KEY="your-openai-key"` in `server/.env`.
-
-### Retrieval setup
-
-See [RAG.md](RAG.md) for the existing architecture, shared ingestion workflow, model/version handling, PostgreSQL vector storage, migrations, retry behavior, and evaluation commands. Gemini embeddings require `GEMINI_API_KEY`. Without that key, the application explicitly uses keyword retrieval.
+See [RAG.md](RAG.md) for local model installation, page-aware indexing, retrieval/reranking settings, authorization, citations and measured limitations. Retrieval needs no paid API or new database. Existing documents need reprocessing to create compatible local vectors.
 
 ## Automated verification
 
-The RAG suites test citation verification, embedding API contracts, authorization with a real database, processing failures and retries. The OCR suite exercises digital and image-only Marathi-English sample PDFs. Live sample answers and timings are recorded separately from deterministic tests. See [actual results and limitations](server/evaluations/RESULTS.md).
+The RAG suites test citation verification, keyword retrieval, authorization with a real database, processing failures and retries. The OCR suite exercises digital and image-only Marathi-English sample PDFs. Live sample answers and timings are recorded separately from deterministic tests. See [actual results and limitations](server/evaluations/RESULTS.md).
 
 ```powershell
 npm run test:rag --prefix server
 npm run test:rag:integration --prefix server
 npm run test:api --prefix server
 npm run eval:rag --prefix server
+npm run eval:hybrid --prefix server
 npm run test:ocr --prefix server
 ```
 
-The full application smoke script is `server/scripts/test-e2e.ts`; it requires the running server and development seed users. `npm run test:api --prefix server` runs those same checks with a controlled answer provider and blocks external requests. See the [stabilization audit](server/evaluations/AUDIT.md) for current results and security limitations.
+The full application smoke script is `server/scripts/test-e2e.ts`; it requires the running server and development seed users. `npm run test:api --prefix server` runs the same checks with controlled synthetic answer generation and blocks external requests. See [current hybrid retrieval details and measurements](RAG.md); older audit files describe earlier implementation states.
 
 ---
 
@@ -307,7 +291,7 @@ The full application smoke script is `server/scripts/test-e2e.ts`; it requires t
 | **Ingestion** | Scanned / Empty PDF Detection | **Implemented** | Detects non-text PDFs with OCR notice |
 | **Analysis** | AI Executive Summary | **Implemented** | Facts vs "Not found in document" separation |
 | **Analysis** | Clause Risk Identification | **Implemented** | 10 clause categories, risk levels, human questions |
-| **Chatbot** | Document-Grounded Chatbot | **Implemented** | Semantic + exact-term retrieval when configured; owner-scoped chunks and metadata-backed citations |
+| **Chatbot** | Document-Grounded Chatbot | **Implemented** | Owner-scoped cosine + BM25/RRF, optional local reranking, server-verified citations |
 | **Checker** | Completeness Checker | **Implemented** | Checklist matching, reviewer check-off toggle |
 | **Extractor**| Dates & Obligations | **Implemented** | Calendar dates vs notice periods, party tags |
 | **Generator**| Legal Document Generator | **Implemented** | Form wizard, validation, editable view, DOCX export |
@@ -321,5 +305,5 @@ The full application smoke script is `server/scripts/test-e2e.ts`; it requires t
 ## ⚠️ Known Limitations & Assumptions
 
 1. **Scanned PDF OCR**: PaddleOCR runs locally for scanned pages and flags low-confidence output for review. Unreadable or flagged OCR should be verified in the OCR preview before relying on its text.
-2. **Deterministic Fallback**: In the absence of a `GEMINI_API_KEY` or `OPENAI_API_KEY`, the application operates in Heuristic Legal Engine mode. Existing analysis features retain heuristic fallback. Chat requires verified evidence and abstains when a supported explanation cannot be generated.
+2. **Retrieval and uncertainty**: Local embeddings and keyword search rank authorized chunks. The existing answer provider must supply exact verified excerpts; unavailable generation or insufficient evidence produces an honest abstention. Rule-based summaries and other analyses retain their existing fallback.
 3. **Legal Disclaimer**: Legal Buddy is an automated contract intelligence and analysis tool. It does not provide legal advice and does not substitute for qualified attorney counsel.

@@ -1,0 +1,96 @@
+{
+  "executedAt": "2026-10-25T05:40:00.795Z",
+  "mode": "controlled synthetic answer; real PostgreSQL, HTTP, PDF/OCR, keyword retrieval; no external calls",
+  "passedTests": 22,
+  "totalTests": 22,
+  "checks": [
+    {
+      "name": "Test User Login (Adv. Sarah Jenkins)",
+      "passed": true
+    },
+    {
+      "name": "Reject Invalid Credentials with 401",
+      "passed": true
+    },
+    {
+      "name": "Fetch Authenticated User Profile",
+      "passed": true
+    },
+    {
+      "name": "Reject Non-PDF Uploads with Validation Error",
+      "passed": true
+    },
+    {
+      "name": "Keep Unreadable Scanned PDF Out of Ready State and Flag for OCR Review",
+      "passed": true
+    },
+    {
+      "name": "Upload & Parse 2-Page Mutual NDA (Page tracking preserved)",
+      "passed": true
+    },
+    {
+      "name": "Summary Extracts Real Factual Details (Parties, Dates, Purpose)",
+      "passed": true
+    },
+    {
+      "name": "Identify Multiple Contract Clauses (Found 3)",
+      "passed": true
+    },
+    {
+      "name": "Clause Excerpts Correlate with Actual Document Text",
+      "passed": true
+    },
+    {
+      "name": "Counsel Can Update Clause Review Status to APPROVED",
+      "passed": true
+    },
+    {
+      "name": "Completeness Checklist Evaluated (Items: 10)",
+      "passed": true
+    },
+    {
+      "name": "Detect Present Standard Sections with Evidence Excerpts",
+      "passed": true
+    },
+    {
+      "name": "Reviewer Can Mark Completeness Item as Reviewed",
+      "passed": true
+    },
+    {
+      "name": "Extract Contractual Deadlines & Performance Covenants (Found: 1)",
+      "passed": true
+    },
+    {
+      "name": "Chat Returns Exact Source Excerpt and Server-Derived Page Metadata",
+      "passed": true
+    },
+    {
+      "name": "Chat Reports Insufficient Evidence for Unsupported Questions",
+      "passed": true
+    },
+    {
+      "name": "Enforce User Isolation (Other-user documents are hidden with 404)",
+      "passed": true
+    },
+    {
+      "name": "Fetch Standard Document Templates Gallery",
+      "passed": true
+    },
+    {
+      "name": "Validate Required Fields in Document Generator Wizard (400)",
+      "passed": true
+    },
+    {
+      "name": "Generate Structured Legal Draft from Template & Field Values",
+      "passed": true
+    },
+    {
+      "name": "Download Valid Microsoft Word DOCX Document (9205 bytes)",
+      "passed": true
+    },
+    {
+      "name": "Dashboard Metrics Reflect Real Persisted Database Records",
+      "passed": true
+    }
+  ]
+}

@@ -1,0 +1,2 @@
+# Optional local embedding runtime; no hosted API or key is used.
+sentence-transformers==5.5.1
