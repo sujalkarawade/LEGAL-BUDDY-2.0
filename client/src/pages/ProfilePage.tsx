@@ -1,87 +1,94 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext.js';
-import {
-  Building,
-  Mail,
-  Calendar,
-  CheckCircle2,
-} from 'lucide-react';
+import { Building, Mail, Calendar, CheckCircle2 } from 'lucide-react';
 
 export const ProfilePage: React.FC = () => {
   const { user } = useAuth();
+
+  const initials = user?.name
+    ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    : 'LB';
+
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-[#0a0a0a]">
-          Profile & System Settings
-        </h1>
-        <p className="text-xs font-mono text-[#666666] uppercase tracking-wide mt-1">
-          Account credentials // Document processing
-        </p>
+    <div style={{ maxWidth: '680px', margin: '0 auto' }} className="animate-fade-in">
+      <div className="page-header">
+        <div className="page-header-text">
+          <h1>Profile & Settings</h1>
+          <p>Account information and system configuration</p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* User Account Details */}
-        <div className="border-[3px] border-[#0a0a0a] bg-white p-6 shadow-[6px_6px_0_#0a0a0a] space-y-4">
-          <div className="flex items-center gap-3 pb-3 border-b-2 border-[#0a0a0a]">
-            <div className="flex h-12 w-12 items-center justify-center border-2 border-[#0a0a0a] bg-[#0a0a0a] text-white font-mono font-bold text-sm shadow-[2px_2px_0_#0a0a0a]">
-              {user?.name ? user.name.slice(0, 2).toUpperCase() : 'LB'}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+        {/* User account */}
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px', paddingBottom: '16px', borderBottom: '1px solid var(--border)' }}>
+            <div
+              style={{
+                width: '48px', height: '48px', borderRadius: '50%',
+                background: 'var(--black)', color: 'var(--white)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontWeight: 700, fontSize: '1rem', flexShrink: 0,
+              }}
+            >
+              {initials}
             </div>
             <div>
-              <h2 className="text-sm font-black uppercase tracking-wide text-[#0a0a0a]">{user?.name}</h2>
-              <span className="border border-[#0a0a0a] bg-[#f0f0f0] px-2 py-0.5 text-[10px] font-mono font-bold uppercase text-[#0a0a0a]">
-                {user?.role || 'User'}
-              </span>
+              <p style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>{user?.name}</p>
+              <span className="badge badge-default" style={{ marginTop: '4px' }}>{user?.role || 'User'}</span>
             </div>
           </div>
 
-          <div className="space-y-3 text-xs text-[#0a0a0a]">
-            <div className="flex items-center justify-between py-2 border-b border-[#e0e0e0]">
-              <span className="text-[#666666] flex items-center gap-2 uppercase font-bold tracking-wider text-[11px]">
-                <Mail className="h-3.5 w-3.5 text-[#0a0a0a]" />
-                Email
-              </span>
-              <span className="font-mono font-bold">{user?.email}</span>
-            </div>
-
-            <div className="flex items-center justify-between py-2 border-b border-[#e0e0e0]">
-              <span className="text-[#666666] flex items-center gap-2 uppercase font-bold tracking-wider text-[11px]">
-                <Building className="h-3.5 w-3.5 text-[#0a0a0a]" />
-                Organization
-              </span>
-              <span className="font-medium text-[#0a0a0a]">{user?.organization || 'Independent'}</span>
-            </div>
-
-            <div className="flex items-center justify-between py-2 border-b border-[#e0e0e0]">
-              <span className="text-[#666666] flex items-center gap-2 uppercase font-bold tracking-wider text-[11px]">
-                <Calendar className="h-3.5 w-3.5 text-[#0a0a0a]" />
-                Created
-              </span>
-              <span className="font-mono text-[#0a0a0a]">
-                {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Active'}
-              </span>
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+            {[
+              { icon: Mail,     label: 'Email',        value: user?.email },
+              { icon: Building, label: 'Organization', value: user?.organization || 'Independent' },
+              { icon: Calendar, label: 'Member since', value: user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Active' },
+            ].map(({ icon: Icon, label, value }) => (
+              <div
+                key={label}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '10px 0', borderBottom: '1px solid var(--border)',
+                  fontSize: '0.875rem',
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontWeight: 500 }}>
+                  <Icon size={14} />
+                  {label}
+                </span>
+                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{value}</span>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Infrastructure Status */}
-        <div className="border-[3px] border-[#0a0a0a] bg-white p-6 shadow-[6px_6px_0_#0a0a0a] space-y-4">
-          <h3 className="text-sm font-black uppercase tracking-wide text-[#0a0a0a]">Application Status</h3>
-          <div className="border-2 border-[#0a0a0a] bg-[#f9f9f9] p-3.5 shadow-[2px_2px_0_#0a0a0a]">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#666666]">Document Analysis</span>
-            <p className="text-xs font-bold text-[#0a0a0a] mt-1">Local rule-based processing</p>
-          </div>
-          <div className="border-2 border-[#0a0a0a] bg-[#f9f9f9] p-3.5 shadow-[2px_2px_0_#0a0a0a]">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#666666]">PostgreSQL Database</span>
-            <div className="flex items-center gap-2 mt-1">
-              <CheckCircle2 className="h-3.5 w-3.5 text-[#27ae60]" />
-              <span className="font-mono text-xs font-bold text-[#0a0a0a]">Connected</span>
+        {/* System status */}
+        <div className="card">
+          <h3 style={{ fontSize: '0.9375rem', fontWeight: 600, marginBottom: '16px' }}>System Status</h3>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ padding: '12px', background: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+              <p className="section-label" style={{ marginBottom: '4px' }}>Document Analysis</p>
+              <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>Local Rule-Based Processing</p>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>Deterministic NLP engine active</p>
+            </div>
+
+            <div style={{ padding: '12px', background: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+              <p className="section-label" style={{ marginBottom: '4px' }}>Database</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                <CheckCircle2 size={15} style={{ color: 'var(--success)' }} />
+                <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>PostgreSQL 17 Connected</p>
+              </div>
+            </div>
+
+            <div style={{ padding: '12px', background: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+              <p className="section-label" style={{ marginBottom: '4px' }}>RAG Engine</p>
+              <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>Hybrid BM25 + Cosine Search</p>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>Retrieval-Augmented Generation enabled</p>
             </div>
           </div>
         </div>
       </div>
-
-
     </div>
   );
 };

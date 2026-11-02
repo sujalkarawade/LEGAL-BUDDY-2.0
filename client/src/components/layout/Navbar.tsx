@@ -1,16 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
-import {
-  Shield,
-  Upload,
-  User,
-  Sparkles,
-  Info,
-  LogOut,
-  ChevronDown,
-  Activity,
-} from 'lucide-react';
+import { Scale, Upload, User, LogOut, ChevronDown, Activity, Shield, Info } from 'lucide-react';
 
 export const Navbar: React.FC<{ sidebarCollapsed: boolean; onToggleSidebar: () => void }> = ({
   sidebarCollapsed,
@@ -18,171 +9,273 @@ export const Navbar: React.FC<{ sidebarCollapsed: boolean; onToggleSidebar: () =
 }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [showStatusModal, setShowStatusModal] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
 
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
+  const getInitials = (name: string) =>
+    name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b-[3px] border-[#0a0a0a] bg-[#0a0a0a] px-6 text-white shadow-sm">
-      <div className="flex items-center gap-4">
+    <header
+      style={{
+        height: 'var(--nav-height)',
+        background: 'var(--white)',
+        borderBottom: '1px solid var(--border)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingLeft: '16px',
+        paddingRight: '20px',
+        position: 'sticky',
+        top: 0,
+        zIndex: 30,
+        flexShrink: 0,
+      }}
+    >
+      {/* Left: hamburger + brand */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <button
           onClick={onToggleSidebar}
-          className="flex h-9 w-9 items-center justify-center border-2 border-white/30 text-white hover:border-white hover:bg-white/10 transition-colors cursor-pointer"
-          title="Toggle Navigation Sidebar"
+          style={{
+            width: '32px',
+            height: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: 'var(--radius)',
+            border: '1px solid var(--border)',
+            background: 'transparent',
+            color: 'var(--text-secondary)',
+            cursor: 'pointer',
+            flexShrink: 0,
+          }}
+          title="Toggle sidebar"
         >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
           </svg>
         </button>
-
-        <div className="hidden sm:flex items-center gap-3">
-          <span className="text-sm font-black tracking-widest uppercase text-white">LEGAL BUDDY</span>
-          <div className="w-[2px] h-3.5 bg-white/30"></div>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">Contract Intelligence</span>
-        </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        {/* System & AI Engine Status Badge */}
+      {/* Right: status, upload, user */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* Engine status */}
         <button
           onClick={() => setShowStatusModal(!showStatusModal)}
-          className="flex items-center gap-2 border-2 border-white/30 bg-transparent px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white hover:border-white hover:bg-white/10 transition-all cursor-pointer font-mono"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '5px 10px',
+            fontSize: '0.75rem',
+            fontWeight: '500',
+            color: 'var(--text-muted)',
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius)',
+            cursor: 'pointer',
+          }}
+          title="AI Engine status"
         >
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400"></span>
-          </span>
-          <span className="hidden md:inline">
-            Local Legal Rules
-          </span>
-          <Info className="h-3.5 w-3.5 text-white/70" />
+          <span
+            style={{
+              width: '6px',
+              height: '6px',
+              borderRadius: '50%',
+              background: 'var(--success)',
+              display: 'inline-block',
+              flexShrink: 0,
+            }}
+          />
+          <span className="hidden-mobile">System</span>
+          <Info size={12} />
         </button>
 
-        {/* Quick Upload Action */}
+        {/* Upload shortcut */}
         <Link
           to="/upload"
-          className="btn btn-sm hidden sm:inline-flex bg-white text-[#0a0a0a] hover:bg-[#0a0a0a] hover:text-white hover:border-white border-2 border-[#0a0a0a]"
+          className="btn btn-sm btn-primary"
+          style={{ display: 'none' }}
         >
-          <Upload className="h-3.5 w-3.5" />
-          <span>Upload Contract</span>
+          <Upload size={13} />
+          <span>Upload</span>
         </Link>
 
-        {/* User Profile Dropdown */}
-        <div className="relative">
+        {/* Show on md+ */}
+        <Link
+          to="/upload"
+          className="btn btn-sm btn-primary"
+          style={{ display: 'inline-flex' }}
+        >
+          <Upload size={13} />
+          <span>Upload</span>
+        </Link>
+
+        {/* User menu */}
+        <div style={{ position: 'relative' }}>
           <button
             onClick={() => setShowUserMenu(!showUserMenu)}
-            className="flex items-center gap-2 border-2 border-white/30 bg-[#0a0a0a] p-1.5 pr-2.5 hover:border-white transition-colors cursor-pointer"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '5px 10px',
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)',
+              cursor: 'pointer',
+              fontSize: '0.8125rem',
+              fontWeight: '500',
+              color: 'var(--text-primary)',
+            }}
           >
-            <div className="flex h-6 w-6 items-center justify-center bg-white text-[#0a0a0a] text-[10px] font-black uppercase font-mono">
+            <span
+              style={{
+                width: '26px',
+                height: '26px',
+                borderRadius: '50%',
+                background: 'var(--black)',
+                color: 'var(--white)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.6875rem',
+                fontWeight: '700',
+                flexShrink: 0,
+              }}
+            >
               {user ? getInitials(user.name) : 'LB'}
-            </div>
-            <div className="hidden text-left md:block">
-              <p className="text-[11px] font-black uppercase text-white leading-none tracking-wide">{user?.name || 'Account'}</p>
-              <p className="text-[9px] font-bold uppercase text-white/50 leading-none mt-1">{user?.organization || 'Counsel'}</p>
-            </div>
-            <ChevronDown className="h-3.5 w-3.5 text-white/60" />
+            </span>
+            <span style={{ maxWidth: '110px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {user?.name?.split(' ')[0] || 'Account'}
+            </span>
+            <ChevronDown size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
           </button>
 
           {showUserMenu && (
-            <div className="absolute right-0 mt-2 w-56 border-2 border-[#0a0a0a] bg-white p-1 text-sm shadow-[4px_4px_0_#0a0a0a] z-50 animate-fadeUp text-[#0a0a0a]">
-              <div className="border-b-2 border-[#0a0a0a] px-3 py-2 bg-[#f9f9f9]">
-                <p className="text-xs font-black uppercase">{user?.name}</p>
-                <p className="text-[10px] font-medium text-gray-600 truncate font-mono">{user?.email}</p>
-              </div>
-
-              <Link
-                to="/profile"
+            <>
+              {/* Backdrop */}
+              <div
+                style={{ position: 'fixed', inset: 0, zIndex: 40 }}
                 onClick={() => setShowUserMenu(false)}
-                className="flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#0a0a0a] hover:bg-[#0a0a0a] hover:text-white transition-colors"
-              >
-                <User className="h-4 w-4" />
-                Profile & Settings
-              </Link>
-
-              <Link
-                to="/lawyer-login"
-                onClick={() => setShowUserMenu(false)}
-                className="flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#0a0a0a] hover:bg-[#0a0a0a] hover:text-white transition-colors"
-              >
-                <Shield className="h-4 w-4 text-[#0a0a0a]" />
-                <span>Lawyer Portal</span>
-              </Link>
-
-              <button
-                onClick={() => {
-                  setShowUserMenu(false);
-                  logout();
-                  navigate('/login');
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: 'calc(100% + 4px)',
+                  width: '200px',
+                  background: 'var(--white)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius)',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+                  zIndex: 50,
+                  overflow: 'hidden',
+                  animation: 'fade-in 0.12s ease',
                 }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#c0392b] hover:bg-[#c0392b] hover:text-white transition-colors cursor-pointer border-t border-gray-200 mt-1"
+                className="animate-fade-in"
               >
-                <LogOut className="h-4 w-4" />
-                Sign Out
-              </button>
-            </div>
+                <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
+                  <p style={{ fontWeight: 600, fontSize: '0.8125rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name}</p>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.email}</p>
+                </div>
+                <div style={{ padding: '4px' }}>
+                  <Link
+                    to="/profile"
+                    onClick={() => setShowUserMenu(false)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 10px',
+                      fontSize: '0.8125rem', fontWeight: '500', color: 'var(--text-primary)',
+                      textDecoration: 'none', borderRadius: '3px',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <User size={14} style={{ color: 'var(--text-muted)' }} />
+                    Profile & Settings
+                  </Link>
+                  <Link
+                    to="/lawyer-login"
+                    onClick={() => setShowUserMenu(false)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 10px',
+                      fontSize: '0.8125rem', fontWeight: '500', color: 'var(--text-primary)',
+                      textDecoration: 'none', borderRadius: '3px',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <Shield size={14} style={{ color: 'var(--text-muted)' }} />
+                    Lawyer Portal
+                  </Link>
+                  <div style={{ height: '1px', background: 'var(--border)', margin: '4px 0' }} />
+                  <button
+                    onClick={() => { setShowUserMenu(false); logout(); navigate('/login'); }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 10px',
+                      fontSize: '0.8125rem', fontWeight: '500', color: 'var(--danger)',
+                      background: 'transparent', border: 'none', cursor: 'pointer',
+                      width: '100%', textAlign: 'left', borderRadius: '3px',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--danger-bg)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <LogOut size={14} />
+                    Sign Out
+                  </button>
+                </div>
+              </div>
+            </>
           )}
         </div>
       </div>
 
-      {/* Engine Status Details Modal */}
+      {/* Status Modal */}
       {showStatusModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-md border-[3px] border-[#0a0a0a] bg-white p-6 shadow-[8px_8px_0_#0a0a0a] animate-fadeUp text-[#0a0a0a]">
-            <div className="flex items-start justify-between pb-3 border-b-2 border-[#0a0a0a]">
-              <div className="flex items-center gap-3">
-                <div className="border-2 border-[#0a0a0a] bg-[#0a0a0a] p-2 text-white">
-                  <Activity className="h-5 w-5" />
-                </div>
+        <div className="modal-overlay" onClick={() => setShowStatusModal(false)}>
+          <div className="modal animate-fade-in" onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div className="icon-box"><Activity size={16} /></div>
                 <div>
-                  <h3 className="text-sm font-black uppercase tracking-wider text-[#0a0a0a]">AI Processing Engine</h3>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Legal Buddy Core Architecture</p>
+                  <h3 style={{ fontSize: '0.9375rem', fontWeight: 600 }}>System Status</h3>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '1px' }}>AI Engine & Infrastructure</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowStatusModal(false)}
-                className="text-[#0a0a0a] hover:bg-[#0a0a0a] hover:text-white border border-[#0a0a0a] w-7 h-7 flex items-center justify-center font-black cursor-pointer"
-              >
-                ✕
-              </button>
+                className="btn-ghost btn"
+                style={{ padding: '4px 8px', color: 'var(--text-muted)' }}
+              >✕</button>
             </div>
 
-            <div className="mt-5 space-y-4 text-xs">
-              <div className="border-2 border-[#0a0a0a] bg-[#f9f9f9] p-3">
-                <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 font-mono">Active Engine</span>
-                <p className="text-xs font-black uppercase text-[#0a0a0a] mt-0.5">Local Rule-Based Analysis</p>
-                <p className="text-gray-600 mt-1.5 leading-relaxed text-[11px]">External model services are currently disabled.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.8125rem' }}>
+              <div style={{ padding: '12px', background: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+                <p className="section-label">Active Engine</p>
+                <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginTop: '4px' }}>Local Rule-Based Analysis</p>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '3px', lineHeight: 1.5 }}>
+                  External AI model services are currently disabled. All analysis runs on the deterministic local engine.
+                </p>
               </div>
 
-              <div className="border-2 border-[#0a0a0a] bg-[#f9f9f9] p-3">
-                <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 font-mono">Database Connection</span>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
-                  <p className="text-[#0a0a0a] font-bold text-xs uppercase font-mono">PostgreSQL 17 (Prisma ORM Active)</p>
+              <div style={{ padding: '12px', background: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+                <p className="section-label">Database</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                  <span className="status-dot status-dot-success" />
+                  <p style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.8125rem' }}>PostgreSQL 17 (Prisma ORM)</p>
                 </div>
               </div>
 
-              <div className="border-2 border-[#b7950b] bg-[#fefdf0] p-3 text-xs text-[#0a0a0a] leading-relaxed">
-                <p className="font-black uppercase tracking-wider text-[#b7950b] mb-1">Legal Safeguard Disclaimer</p>
-                Legal Buddy is an AI-assisted contract review and intelligence tool. Generated findings, clause risks, and summaries do not constitute legal advice or formal attorney-client privilege.
+              <div className="alert alert-warning" style={{ fontSize: '0.75rem', lineHeight: 1.5 }}>
+                <Shield size={14} style={{ flexShrink: 0, marginTop: '1px' }} />
+                <span>Legal Buddy is an AI-assisted tool. Generated findings do not constitute legal advice or formal attorney-client privilege.</span>
               </div>
             </div>
 
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={() => setShowStatusModal(false)}
-                className="btn btn-primary btn-sm"
-              >
-                Close
-              </button>
+            <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowStatusModal(false)} className="btn btn-sm btn-primary">Close</button>
             </div>
           </div>
         </div>

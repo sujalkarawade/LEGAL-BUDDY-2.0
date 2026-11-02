@@ -1,15 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import {
-  CheckCircle2,
-  AlertTriangle,
-  XCircle,
-  HelpCircle,
-  FileCheck,
-  ShieldCheck,
-  Info,
-  Check,
-} from 'lucide-react';
+import { CheckCircle2, AlertTriangle, XCircle, Info, Check, FileCheck } from 'lucide-react';
 import ApiService from '../services/api.js';
 import { DocumentRecord, CompletenessCheck } from '../types/index.js';
 import { DocumentNavHeader } from '../components/document/DocumentNavHeader.js';
@@ -37,20 +28,16 @@ export const DocumentCompletenessPage: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, [id]);
+  useEffect(() => { fetchData(); }, [id]);
 
   const handleToggleReview = async (checkId: string, currentStatus: boolean) => {
     if (!id) return;
     setUpdatingId(checkId);
     try {
       const res = await ApiService.toggleCompletenessReview(id, checkId, !currentStatus);
-      setChecks((prev) =>
-        prev.map((c) => (c.id === checkId ? { ...c, isReviewed: res.check.isReviewed } : c))
-      );
+      setChecks((prev) => prev.map((c) => (c.id === checkId ? { ...c, isReviewed: res.check.isReviewed } : c)));
     } catch (err: any) {
-      alert(`Failed to update review status: ${err.message}`);
+      alert(`Failed to update: ${err.message}`);
     } finally {
       setUpdatingId(null);
     }
@@ -61,127 +48,127 @@ export const DocumentCompletenessPage: React.FC = () => {
   const notFoundCount = checks.filter((c) => c.status === 'NOT_FOUND').length;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 animate-fadeUp">
+    <div style={{ maxWidth: '900px', margin: '0 auto' }} className="animate-fade-in">
       <DocumentNavHeader document={document} />
 
-      {/* Header & Overview Stats */}
-      <div className="border-[3px] border-[#0a0a0a] bg-white p-6 shadow-[6px_6px_0_#0a0a0a] space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b-2 border-[#0a0a0a]">
+      {/* Overview */}
+      <div className="card" style={{ marginBottom: '16px' }}>
+        <div className="card-header">
           <div>
-            <h2 className="text-base font-black uppercase tracking-wide text-[#0a0a0a]">Contract Completeness Checker</h2>
-            <p className="text-[11px] text-gray-600 font-medium uppercase tracking-wider">
-              Checklist comparison against standard commercial contract governance requirements
+            <h2>Completeness Checklist</h2>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '3px' }}>
+              Audit against standard commercial contract requirements
             </p>
           </div>
-
-          <div className="flex items-center gap-3">
-            <span className="severity-badge severity-low">
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              {foundCount} FOUND
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <span className="badge badge-success">
+              <CheckCircle2 size={11} /> {foundCount} Found
             </span>
-            <span className="severity-badge severity-high">
-              <AlertTriangle className="h-3.5 w-3.5" />
-              {needsReviewCount} NEEDS REVIEW
+            <span className="badge badge-warning">
+              <AlertTriangle size={11} /> {needsReviewCount} Needs Review
             </span>
-            <span className="severity-badge severity-critical">
-              <XCircle className="h-3.5 w-3.5" />
-              {notFoundCount} NOT FOUND
+            <span className="badge badge-danger">
+              <XCircle size={11} /> {notFoundCount} Not Found
             </span>
           </div>
         </div>
 
-        {/* Legal Safeguard Notice */}
-        <div className="border-2 border-[#0a0a0a] bg-[#f9f9f9] p-3.5 text-xs text-gray-700 flex items-start gap-3 shadow-[2px_2px_0_#0a0a0a]">
-          <Info className="h-4 w-4 text-[#0a0a0a] shrink-0 mt-0.5" />
-          <p className="font-medium">
-            <span className="font-black uppercase text-[#0a0a0a] font-mono">Notice on Missing Clauses:</span> An item marked as "Not Found" indicates that standard boilerplate language was not identified in the document scan. A missing section does not automatically invalidate the contract or render it unenforceable.
+        <div className="alert alert-info" style={{ fontSize: '0.8125rem' }}>
+          <Info size={14} style={{ flexShrink: 0, marginTop: '1px' }} />
+          <p style={{ lineHeight: 1.6 }}>
+            <strong>Notice:</strong> A "Not Found" result means standard boilerplate language was not detected in the document scan. It does not automatically invalidate the contract.
           </p>
         </div>
       </div>
 
-      {/* Checklist Items */}
+      {/* Checklist */}
       {isLoading ? (
-        <div className="flex h-64 items-center justify-center">
-          <div className="spinner"></div>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 0' }}>
+          <div className="spinner" />
         </div>
       ) : checks.length === 0 ? (
-        <div className="border-[3px] border-[#0a0a0a] bg-white p-12 text-center shadow-[6px_6px_0_#0a0a0a]">
-          <FileCheck className="mx-auto h-12 w-12 text-gray-400 mb-3" />
-          <h3 className="text-sm font-black uppercase text-[#0a0a0a]">No checklist items generated</h3>
+        <div className="card">
+          <div className="empty-state">
+            <div className="empty-state-icon"><FileCheck size={20} /></div>
+            <h3>No checklist items generated</h3>
+          </div>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {checks.map((item) => {
             const isFound = item.status === 'FOUND';
             const isReview = item.status === 'NEEDS_REVIEW';
+            const borderColor = item.isReviewed ? 'var(--border)' : isFound ? 'var(--border)' : isReview ? '#ead99b' : '#f5c6c3';
+            const bgColor = item.isReviewed ? 'var(--success-bg)' : isFound ? 'var(--white)' : isReview ? 'var(--warning-bg)' : 'var(--danger-bg)';
 
             return (
               <div
                 key={item.id}
-                className={`border-2 border-[#0a0a0a] p-5 transition-all shadow-[4px_4px_0_#0a0a0a] hover:-translate-y-0.5 hover:shadow-[6px_6px_0_#0a0a0a] ${
-                  item.isReviewed
-                    ? 'bg-[#f4fbf7]'
-                    : isFound
-                    ? 'bg-white'
-                    : isReview
-                    ? 'bg-[#fefdf0]'
-                    : 'bg-[#fdf0ef]'
-                }`}
+                style={{
+                  background: bgColor,
+                  border: `1px solid ${borderColor}`,
+                  borderRadius: 'var(--radius)',
+                  padding: '16px',
+                }}
               >
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5">
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', flex: 1, minWidth: 0 }}>
+                    <div style={{ marginTop: '1px', flexShrink: 0 }}>
                       {isFound ? (
-                        <div className="flex h-7 w-7 items-center justify-center border-2 border-[#27ae60] bg-[#eafaf1] text-[#27ae60]">
-                          <CheckCircle2 className="h-4 w-4" />
-                        </div>
+                        <CheckCircle2 size={18} style={{ color: 'var(--success)' }} />
                       ) : isReview ? (
-                        <div className="flex h-7 w-7 items-center justify-center border-2 border-[#d35400] bg-[#fef5ec] text-[#d35400]">
-                          <AlertTriangle className="h-4 w-4" />
-                        </div>
+                        <AlertTriangle size={18} style={{ color: 'var(--warning)' }} />
                       ) : (
-                        <div className="flex h-7 w-7 items-center justify-center border-2 border-[#c0392b] bg-[#fdf0ef] text-[#c0392b]">
-                          <XCircle className="h-4 w-4" />
-                        </div>
+                        <XCircle size={18} style={{ color: 'var(--danger)' }} />
                       )}
                     </div>
 
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-xs font-black uppercase tracking-wide text-[#0a0a0a]">{item.expectedSection}</h4>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                        <h4 style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-primary)' }}>
+                          {item.expectedSection}
+                        </h4>
                         {item.pageNumber && (
-                          <span className="border border-gray-300 bg-white px-1.5 py-0.2 text-[10px] font-mono font-bold text-gray-600 uppercase">
-                            PAGE {item.pageNumber}
-                          </span>
+                          <span className="badge badge-default">Page {item.pageNumber}</span>
+                        )}
+                        {item.isReviewed && (
+                          <span className="badge badge-success">Reviewed</span>
                         )}
                       </div>
-                      <p className="text-xs text-[#0a0a0a] mt-1.5 leading-relaxed font-medium">{item.reason}</p>
+                      <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                        {item.reason}
+                      </p>
+
+                      {item.excerpt && (
+                        <div
+                          style={{
+                            marginTop: '10px',
+                            padding: '10px 12px',
+                            background: 'rgba(255,255,255,0.7)',
+                            borderRadius: 'var(--radius)',
+                            border: '1px solid var(--border)',
+                            fontSize: '0.8125rem',
+                            color: 'var(--text-secondary)',
+                            fontStyle: 'italic',
+                            lineHeight: 1.6,
+                          }}
+                        >
+                          "{item.excerpt}"
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {/* Review Checkbox Action */}
                   <button
                     onClick={() => handleToggleReview(item.id, item.isReviewed)}
                     disabled={updatingId === item.id}
-                    className={`btn btn-sm shrink-0 ${
-                      item.isReviewed
-                        ? 'btn-primary'
-                        : ''
-                    }`}
+                    className={`btn btn-sm ${item.isReviewed ? 'btn-primary' : ''}`}
+                    style={{ flexShrink: 0 }}
                   >
-                    <Check className="h-3.5 w-3.5" />
-                    <span>{item.isReviewed ? 'REVIEWED' : 'MARK REVIEWED'}</span>
+                    <Check size={12} />
+                    {item.isReviewed ? 'Reviewed' : 'Mark Reviewed'}
                   </button>
                 </div>
-
-                {/* Excerpt if Found */}
-                {item.excerpt && (
-                  <div className="mt-4 pt-3 border-t-2 border-[#0a0a0a]">
-                    <div className="border-2 border-[#0a0a0a] bg-[#f9f9f9] p-3 font-mono text-[11px] text-[#0a0a0a] leading-relaxed">
-                      "{item.excerpt}"
-                    </div>
-                  </div>
-                )}
               </div>
             );
           })}

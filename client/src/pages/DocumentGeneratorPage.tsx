@@ -14,6 +14,7 @@ import {
   Building,
   Shield,
   Layers,
+  Check,
 } from 'lucide-react';
 import ApiService from '../services/api.js';
 import { DocumentTemplate, GeneratedDocument } from '../types/index.js';
@@ -122,157 +123,238 @@ export const DocumentGeneratorPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex h-96 items-center justify-center">
-        <div className="h-8 w-8 animate-spin border-3 border-[#0a0a0a] border-t-transparent"></div>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '320px' }}>
+        <div className="spinner" />
       </div>
     );
   }
 
+  const steps = [
+    { step: 1, label: 'Select Template' },
+    { step: 2, label: 'Fill Details' },
+    { step: 3, label: 'Review' },
+    { step: 4, label: 'Export' },
+  ];
+
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-[#0a0a0a]">
-          Legal Document Generator
-        </h1>
-        <p className="text-xs font-mono text-[#666666] uppercase tracking-wide mt-1">
-          Structured template drafting // Instant clause assembly // Export to Word (.docx)
-        </p>
+    <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+      {/* Page Header */}
+      <div className="page-header">
+        <div className="page-header-text">
+          <h1>Document Generator</h1>
+          <p>Standardized commercial contract drafting and .docx export</p>
+        </div>
       </div>
 
       {/* Step Indicator */}
-      <div className="border-[3px] border-[#0a0a0a] bg-white p-4 shadow-[4px_4px_0_#0a0a0a] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3 sm:gap-6 overflow-x-auto pb-1 sm:pb-0">
-          {[
-            { step: 1, label: '1. Select Template' },
-            { step: 2, label: '2. Contract Terms' },
-            { step: 3, label: '3. Review Details' },
-            { step: 4, label: '4. Preview & Export' },
-          ].map((item) => {
+      <div
+        className="card"
+        style={{
+          padding: '12px 20px',
+          marginBottom: '24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {steps.map((item, idx) => {
             const isActive = currentStep === item.step;
             const isDone = currentStep > item.step;
             return (
-              <button
-                type="button"
-                key={item.step}
-                onClick={() => {
-                  if (item.step < currentStep || (item.step === 3 && validateCurrentFields())) {
-                    setCurrentStep(item.step);
-                  }
-                }}
-                className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider cursor-pointer whitespace-nowrap transition-all ${
-                  isActive
-                    ? 'text-[#0a0a0a]'
-                    : isDone
-                    ? 'text-[#0a0a0a]'
-                    : 'text-[#888888]'
-                }`}
-              >
-                <div
-                  className={`flex h-6 w-6 items-center justify-center font-mono text-[11px] font-bold border-2 ${
-                    isActive
-                      ? 'border-[#0a0a0a] bg-[#0a0a0a] text-white shadow-[2px_2px_0_#0a0a0a]'
-                      : isDone
-                      ? 'border-[#0a0a0a] bg-[#e0e0e0] text-[#0a0a0a]'
-                      : 'border-[#d0d0d0] bg-[#f0f0f0] text-[#888888]'
-                  }`}
+              <React.Fragment key={item.step}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (item.step < currentStep || (item.step === 3 && validateCurrentFields())) {
+                      setCurrentStep(item.step);
+                    }
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    background: 'none',
+                    border: 'none',
+                    cursor: item.step <= currentStep ? 'pointer' : 'default',
+                    color: isActive ? 'var(--text-primary)' : isDone ? 'var(--text-secondary)' : 'var(--text-muted)',
+                    fontWeight: isActive ? 700 : 500,
+                    fontSize: '0.8125rem',
+                  }}
                 >
-                  {isDone ? '✓' : item.step}
-                </div>
-                <span className="hidden sm:inline">{item.label}</span>
-              </button>
+                  <span
+                    style={{
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      background: isActive ? 'var(--black)' : isDone ? 'var(--surface-alt)' : 'var(--surface)',
+                      color: isActive ? 'var(--white)' : isDone ? 'var(--text-primary)' : 'var(--text-muted)',
+                      border: isDone ? '1px solid var(--border)' : 'none',
+                    }}
+                  >
+                    {isDone ? <Check size={12} /> : item.step}
+                  </span>
+                  <span>{item.label}</span>
+                </button>
+                {idx < steps.length - 1 && (
+                  <span style={{ color: 'var(--border-strong)', fontSize: '0.75rem' }}>/</span>
+                )}
+              </React.Fragment>
             );
           })}
         </div>
 
-        <div className="text-xs font-mono text-[#666666] border-t sm:border-t-0 pt-2 sm:pt-0 border-[#e0e0e0]">
-          Template: <span className="font-bold text-[#0a0a0a]">{selectedTemplate?.title || 'None Selected'}</span>
-        </div>
+        {selectedTemplate && (
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+            Selected: <strong style={{ color: 'var(--text-primary)' }}>{selectedTemplate.title}</strong>
+          </span>
+        )}
       </div>
 
       {/* STEP 1: Template Selection Gallery */}
       {currentStep === 1 && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
             {templates.map((tpl) => {
               const isSelected = selectedTemplate?.id === tpl.id;
               return (
                 <div
                   key={tpl.id}
                   onClick={() => handleTemplateSelect(tpl)}
-                  className={`border-[3px] border-[#0a0a0a] bg-white p-5 shadow-[4px_4px_0_#0a0a0a] hover:shadow-[6px_6px_0_#0a0a0a] hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all cursor-pointer flex flex-col justify-between ${
-                    isSelected ? 'bg-[#f5f5f5] ring-2 ring-[#0a0a0a]' : ''
-                  }`}
+                  className="card"
+                  style={{
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    borderColor: isSelected ? 'var(--black)' : 'var(--border)',
+                    boxShadow: isSelected ? '0 0 0 1px var(--black)' : 'none',
+                    transition: 'border-color var(--transition)',
+                  }}
                 >
                   <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="border border-[#0a0a0a] bg-[#f0f0f0] px-2 py-0.5 text-[10px] font-mono font-bold uppercase text-[#0a0a0a]">
-                        {tpl.category}
-                      </span>
-                      <FileText className="h-4 w-4 text-[#0a0a0a]" />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                      <span className="badge badge-default">{tpl.category}</span>
+                      <FileText size={16} style={{ color: 'var(--text-muted)' }} />
                     </div>
-                    <h3 className="text-sm font-black uppercase tracking-wide text-[#0a0a0a]">{tpl.title}</h3>
-                    <p className="text-xs text-[#555555] mt-2 leading-relaxed">
+                    <h3 style={{ fontSize: '0.9375rem', fontWeight: 600, marginBottom: '6px' }}>{tpl.title}</h3>
+                    <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                       {tpl.description}
                     </p>
                   </div>
 
-                  <div className="mt-5 pt-3 border-t-2 border-[#0a0a0a] flex items-center justify-between text-xs font-bold uppercase tracking-wider text-[#0a0a0a]">
-                    <span>Configure Template</span>
-                    <ArrowRight className="h-3.5 w-3.5" />
+                  <div
+                    style={{
+                      marginTop: '20px',
+                      paddingTop: '12px',
+                      borderTop: '1px solid var(--border)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontSize: '0.8125rem',
+                      fontWeight: 600,
+                      color: 'var(--text-primary)',
+                    }}
+                  >
+                    <span>Use this template</span>
+                    <ArrowRight size={14} />
                   </div>
                 </div>
               );
             })}
           </div>
+
+          {/* Draft History */}
+          {draftHistory.length > 0 && (
+            <div className="card">
+              <div className="card-header">
+                <div>
+                  <h3 style={{ fontSize: '0.9375rem' }}>Previous Drafts</h3>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    {draftHistory.length} documents generated previously
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {draftHistory.map((draft) => (
+                  <div
+                    key={draft.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '12px 0',
+                      borderBottom: '1px solid var(--border)',
+                    }}
+                  >
+                    <div>
+                      <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>{draft.title}</p>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                        {draft.category} · {new Date(draft.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <a
+                      href={`/api/document-generator/${draft.id}/download`}
+                      className="btn btn-secondary btn-sm"
+                    >
+                      <Download size={13} />
+                      <span>Download .DOCX</span>
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* STEP 2: Input Form Wizard */}
+      {/* STEP 2: Input Form */}
       {currentStep === 2 && selectedTemplate && (
-        <div className="border-[3px] border-[#0a0a0a] bg-white p-6 sm:p-8 shadow-[6px_6px_0_#0a0a0a] space-y-6">
-          <div className="flex items-center justify-between pb-4 border-b-2 border-[#0a0a0a]">
+        <div className="card" style={{ padding: '28px' }}>
+          <div className="card-header" style={{ marginBottom: '20px', paddingBottom: '14px' }}>
             <div>
-              <span className="border border-[#0a0a0a] bg-[#f0f0f0] px-2 py-0.5 text-[10px] font-mono font-bold uppercase text-[#0a0a0a]">
-                {selectedTemplate.category}
-              </span>
-              <h2 className="text-base font-black uppercase tracking-wide text-[#0a0a0a] mt-1.5">
-                {selectedTemplate.title}
-              </h2>
-              <p className="text-xs font-mono text-[#666666] mt-0.5">
-                Complete required contractual parameters and variable fields
+              <span className="badge badge-default" style={{ marginBottom: '6px' }}>{selectedTemplate.category}</span>
+              <h2 style={{ fontSize: '1.125rem' }}>{selectedTemplate.title}</h2>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                Fill in the required fields to assemble this agreement
               </p>
             </div>
-            <button
-              onClick={() => setCurrentStep(1)}
-              className="btn btn-secondary btn-sm flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" /> Change Template
+            <button onClick={() => setCurrentStep(1)} className="btn btn-secondary btn-sm">
+              <ArrowLeft size={13} />
+              <span>Change Template</span>
             </button>
           </div>
 
-          <div className="space-y-5">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-[#0a0a0a] mb-1.5">
+              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: '6px' }}>
                 Custom Document Title (Optional)
               </label>
               <input
                 type="text"
                 value={customTitle}
                 onChange={(e) => setCustomTitle(e.target.value)}
-                placeholder={`${selectedTemplate.title} - Final Executable Draft`}
-                className="w-full border-2 border-[#0a0a0a] bg-[#f9f9f9] px-4 py-2.5 text-xs font-medium text-[#0a0a0a] placeholder-[#888888] focus:bg-white focus:shadow-[4px_4px_0_#0a0a0a] focus:outline-none transition-all"
+                placeholder={`${selectedTemplate.title} - Draft`}
+                className="input"
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
               {selectedTemplate.fields?.map((field) => (
                 <div
                   key={field.name}
-                  className={field.type === 'textarea' ? 'md:col-span-2' : ''}
+                  style={field.type === 'textarea' ? { gridColumn: '1 / -1' } : {}}
                 >
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#0a0a0a] mb-1.5">
-                    {field.label} {field.required && <span className="text-[#c0392b] font-bold">*</span>}
+                  <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: '6px' }}>
+                    {field.label} {field.required && <span style={{ color: 'var(--danger)' }}>*</span>}
                   </label>
 
                   {field.type === 'textarea' ? (
@@ -281,11 +363,8 @@ export const DocumentGeneratorPage: React.FC = () => {
                       value={formData[field.name] || ''}
                       onChange={(e) => handleInputChange(field.name, e.target.value)}
                       placeholder={field.placeholder}
-                      className={`w-full border-2 bg-[#f9f9f9] px-4 py-2 text-xs font-medium text-[#0a0a0a] placeholder-[#888888] focus:bg-white focus:outline-none transition-all ${
-                        formErrors[field.name]
-                          ? 'border-[#c0392b] bg-[#fff5f5]'
-                          : 'border-[#0a0a0a] focus:shadow-[4px_4px_0_#0a0a0a]'
-                      }`}
+                      className="textarea"
+                      style={formErrors[field.name] ? { borderColor: 'var(--danger)' } : {}}
                     />
                   ) : (
                     <input
@@ -293,17 +372,14 @@ export const DocumentGeneratorPage: React.FC = () => {
                       value={formData[field.name] || ''}
                       onChange={(e) => handleInputChange(field.name, e.target.value)}
                       placeholder={field.placeholder}
-                      className={`w-full border-2 bg-[#f9f9f9] px-4 py-2.5 text-xs font-medium text-[#0a0a0a] placeholder-[#888888] focus:bg-white focus:outline-none transition-all ${
-                        formErrors[field.name]
-                          ? 'border-[#c0392b] bg-[#fff5f5]'
-                          : 'border-[#0a0a0a] focus:shadow-[4px_4px_0_#0a0a0a]'
-                      }`}
+                      className="input"
+                      style={formErrors[field.name] ? { borderColor: 'var(--danger)' } : {}}
                     />
                   )}
 
                   {formErrors[field.name] && (
-                    <p className="text-[11px] font-mono text-[#c0392b] font-bold mt-1">
-                      ! {formErrors[field.name]}
+                    <p style={{ fontSize: '0.75rem', color: 'var(--danger)', marginTop: '4px', fontWeight: 500 }}>
+                      {formErrors[field.name]}
                     </p>
                   )}
                 </div>
@@ -311,11 +387,17 @@ export const DocumentGeneratorPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="pt-4 border-t-2 border-[#0a0a0a] flex items-center justify-between">
-            <button
-              onClick={() => setCurrentStep(1)}
-              className="btn btn-secondary btn-sm text-xs font-bold uppercase tracking-wider"
-            >
+          <div
+            style={{
+              marginTop: '28px',
+              paddingTop: '16px',
+              borderTop: '1px solid var(--border)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <button onClick={() => setCurrentStep(1)} className="btn btn-secondary btn-sm">
               Back
             </button>
             <button
@@ -324,69 +406,79 @@ export const DocumentGeneratorPage: React.FC = () => {
                   setCurrentStep(3);
                 }
               }}
-              className="btn btn-primary btn-sm flex items-center gap-2 text-xs font-bold uppercase tracking-wider"
+              className="btn btn-primary"
             >
               <span>Review Details</span>
-              <ArrowRight className="h-3.5 w-3.5" />
+              <ArrowRight size={14} />
             </button>
           </div>
         </div>
       )}
 
-      {/* STEP 3: Review Details Before Assembly */}
+      {/* STEP 3: Review Details */}
       {currentStep === 3 && selectedTemplate && (
-        <div className="border-[3px] border-[#0a0a0a] bg-white p-6 sm:p-8 shadow-[6px_6px_0_#0a0a0a] space-y-6">
-          <div className="pb-4 border-b-2 border-[#0a0a0a]">
-            <h2 className="text-base font-black uppercase tracking-wide text-[#0a0a0a]">
-              Review Document Parameters
-            </h2>
-            <p className="text-xs font-mono text-[#666666] mt-0.5">
-              Confirm all operational covenants before generating the draft document
-            </p>
+        <div className="card" style={{ padding: '28px' }}>
+          <div className="card-header" style={{ marginBottom: '20px', paddingBottom: '14px' }}>
+            <div>
+              <h2 style={{ fontSize: '1.125rem' }}>Review Document Parameters</h2>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                Verify all contractual terms before assembling the draft
+              </p>
+            </div>
           </div>
 
-          <div className="border-2 border-[#0a0a0a] bg-[#f9f9f9] p-5 shadow-[3px_3px_0_#0a0a0a] grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
+          <div
+            style={{
+              background: 'var(--surface)',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--border)',
+              padding: '16px',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+              gap: '14px',
+              marginBottom: '20px',
+            }}
+          >
             {selectedTemplate.fields?.map((field) => (
-              <div key={field.name} className="space-y-1">
-                <span className="text-[11px] text-[#666666] uppercase font-bold tracking-wider">
+              <div key={field.name}>
+                <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
                   {field.label}:
                 </span>
-                <p className="font-bold text-[#0a0a0a] bg-white border border-[#0a0a0a] p-2">
-                  {formData[field.name] ? String(formData[field.name]) : '[Not Provided]'}
+                <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '2px' }}>
+                  {formData[field.name] ? String(formData[field.name]) : '—'}
                 </p>
               </div>
             ))}
           </div>
 
-          <div className="border-2 border-[#0a0a0a] bg-[#fffbe6] p-4 text-xs text-[#0a0a0a] shadow-[3px_3px_0_#0a0a0a] leading-relaxed">
-            <p className="font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5">
-              <AlertCircle className="h-4 w-4" />
-              Notice on Template Generation:
-            </p>
-            This document will be generated with standard commercial clauses and stamped as "DRAFT — REVIEW BEFORE USE". Consult qualified legal counsel before official execution.
+          <div className="alert alert-warning" style={{ marginBottom: '24px' }}>
+            <AlertCircle size={16} style={{ flexShrink: 0 }} />
+            <div>
+              <p style={{ fontWeight: 600 }}>Standard Draft Notice</p>
+              <p style={{ fontSize: '0.8125rem', marginTop: '2px' }}>
+                This draft will be generated with standard commercial clauses. Review all clauses with qualified counsel prior to formal execution.
+              </p>
+            </div>
           </div>
 
-          <div className="pt-2 flex items-center justify-between">
-            <button
-              onClick={() => setCurrentStep(2)}
-              className="btn btn-secondary btn-sm text-xs font-bold uppercase tracking-wider"
-            >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <button onClick={() => setCurrentStep(2)} className="btn btn-secondary">
               Modify Fields
             </button>
             <button
               onClick={handleGenerate}
               disabled={isGenerating}
-              className="btn btn-primary flex items-center gap-2 text-xs font-bold uppercase tracking-wider disabled:opacity-50"
+              className="btn btn-primary"
             >
               {isGenerating ? (
                 <>
-                  <div className="h-3.5 w-3.5 animate-spin border-2 border-white border-t-transparent"></div>
-                  <span>Generating Contract...</span>
+                  <div className="spinner" style={{ width: '14px', height: '14px', borderWidth: '2px', borderColor: '#fff', borderTopColor: 'transparent' }} />
+                  <span>Generating Contract…</span>
                 </>
               ) : (
                 <>
-                  <Sparkles className="h-4 w-4" />
-                  <span>Generate Editable Draft & DOCX</span>
+                  <Sparkles size={15} />
+                  <span>Generate Contract Draft</span>
                 </>
               )}
             </button>
@@ -394,105 +486,91 @@ export const DocumentGeneratorPage: React.FC = () => {
         </div>
       )}
 
-      {/* STEP 4: Live Editable Preview & Export Actions */}
+      {/* STEP 4: Live Preview & Export */}
       {currentStep === 4 && (
-        <div className="space-y-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {/* Action Ribbon */}
-          <div className="border-[3px] border-[#0a0a0a] bg-white p-4 shadow-[4px_4px_0_#0a0a0a] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#0a0a0a]">
-              <span className="flex h-5 w-5 items-center justify-center border-2 border-[#0a0a0a] bg-[#0a0a0a] text-white font-mono text-[11px]">
-                ✓
-              </span>
-              <span>Draft Generated Successfully</span>
+          <div
+            className="card"
+            style={{
+              padding: '14px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '12px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div
+                style={{
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  background: 'var(--success)',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Check size={14} />
+              </div>
+              <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>Draft Ready</span>
             </div>
 
-            <div className="flex items-center flex-wrap gap-2">
-              <button
-                onClick={handleCopy}
-                className="btn btn-secondary btn-sm flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider"
-              >
-                <Copy className="h-3.5 w-3.5" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <button onClick={handleCopy} className="btn btn-secondary btn-sm">
+                <Copy size={13} />
                 <span>{copySuccess ? 'Copied!' : 'Copy Text'}</span>
               </button>
-              <button
-                onClick={handlePrint}
-                className="btn btn-secondary btn-sm flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider"
-              >
-                <Printer className="h-3.5 w-3.5" />
+              <button onClick={handlePrint} className="btn btn-secondary btn-sm">
+                <Printer size={13} />
                 <span>Print / Save PDF</span>
               </button>
               {generatedResult && (
                 <a
                   href={`/api/document-generator/${generatedResult.id}/download`}
-                  className="btn btn-primary btn-sm flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider"
+                  className="btn btn-primary btn-sm"
                 >
-                  <Download className="h-3.5 w-3.5" />
+                  <Download size={13} />
                   <span>Download .DOCX</span>
                 </a>
               )}
             </div>
           </div>
 
-          {/* Draft Watermark Banner */}
-          <div className="border-2 border-[#0a0a0a] bg-[#f0f0f0] p-3 text-center text-xs font-mono font-bold uppercase tracking-widest text-[#0a0a0a] shadow-[3px_3px_0_#0a0a0a]">
-            [ DRAFT — REVIEW BEFORE USE. NOT LEGAL ADVICE. ]
-          </div>
-
-          {/* Editable Document Editor */}
-          <div className="border-[3px] border-[#0a0a0a] bg-white p-6 sm:p-8 shadow-[6px_6px_0_#0a0a0a]">
+          {/* Textarea Paper */}
+          <div className="card" style={{ padding: '20px' }}>
             <textarea
               rows={24}
               value={editableContent}
               onChange={(e) => setEditableContent(e.target.value)}
-              className="w-full bg-[#fcfcfc] border-2 border-[#0a0a0a] p-5 font-mono text-xs text-[#0a0a0a] leading-relaxed focus:outline-none focus:bg-white resize-y shadow-inner"
+              className="textarea"
+              style={{
+                width: '100%',
+                fontFamily: 'monospace',
+                fontSize: '0.8125rem',
+                lineHeight: 1.7,
+                padding: '16px',
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                resize: 'vertical',
+              }}
             />
           </div>
 
-          <div className="flex justify-end">
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <button
               onClick={() => {
                 setCurrentStep(1);
                 setFormData({});
                 setGeneratedResult(null);
               }}
-              className="btn btn-secondary btn-sm text-xs font-bold uppercase tracking-wider"
+              className="btn btn-secondary btn-sm"
             >
-              Draft another document →
+              Draft Another Document →
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* Generated Draft History */}
-      {draftHistory.length > 0 && currentStep === 1 && (
-        <div className="border-[3px] border-[#0a0a0a] bg-white p-5 shadow-[4px_4px_0_#0a0a0a] space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b-2 border-[#0a0a0a]">
-            <h3 className="text-sm font-black uppercase tracking-wider text-[#0a0a0a]">
-              Saved Drafts History
-            </h3>
-            <span className="font-mono text-xs text-[#666666]">
-              {draftHistory.length} drafts archived
-            </span>
-          </div>
-
-          <div className="divide-y-2 divide-[#0a0a0a] text-xs">
-            {draftHistory.map((draft) => (
-              <div key={draft.id} className="py-3 flex items-center justify-between gap-4">
-                <div>
-                  <p className="font-bold uppercase tracking-wide text-[#0a0a0a]">{draft.title}</p>
-                  <p className="font-mono text-[11px] text-[#666666] mt-0.5">
-                    {draft.category} • Created {new Date(draft.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
-                <a
-                  href={`/api/document-generator/${draft.id}/download`}
-                  className="btn btn-secondary btn-sm flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider"
-                >
-                  <Download className="h-3 w-3" />
-                  <span>DOCX</span>
-                </a>
-              </div>
-            ))}
           </div>
         </div>
       )}

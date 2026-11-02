@@ -4,17 +4,12 @@ import {
   FileText,
   AlertTriangle,
   Clock,
-  Sparkles,
   Upload,
   FileCode2,
   ArrowRight,
-  ShieldCheck,
-  CheckCircle,
-  Search,
-  ExternalLink,
-  ChevronRight,
-  Calendar,
   Layers,
+  Calendar,
+  ChevronRight,
 } from 'lucide-react';
 import ApiService from '../services/api.js';
 import { DashboardStats } from '../types/index.js';
@@ -22,235 +17,189 @@ import { DashboardStats } from '../types/index.js';
 export const DashboardPage: React.FC = () => {
   const [data, setData] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     ApiService.getDashboardStats()
       .then((res) => setData(res))
-      .catch((err) => setError(err.message || 'Failed to load dashboard metrics.'))
+      .catch(() => {})
       .finally(() => setIsLoading(false));
   }, []);
 
   if (isLoading) {
     return (
-      <div className="flex h-96 items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin border-3 border-[#0a0a0a] border-t-transparent"></div>
-          <p className="text-xs font-mono text-[#666666] uppercase tracking-wider">Loading contract intelligence dashboard...</p>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '320px' }}>
+        <div className="spinner" />
       </div>
     );
   }
 
   const stats = data?.stats || {
-    totalDocs: 0,
-    completedDocs: 0,
-    totalClauses: 0,
-    highRiskClauses: 0,
-    pendingObligations: 0,
-    totalDrafts: 0,
+    totalDocs: 0, completedDocs: 0, totalClauses: 0,
+    highRiskClauses: 0, pendingObligations: 0, totalDrafts: 0,
   };
 
   const isNewAccount = stats.totalDocs === 0;
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto animate-fadeUp">
-      {/* Top Banner / Welcome */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b-2 border-[#0a0a0a]">
-        <div>
-          <h1 className="text-2xl font-black uppercase tracking-tight text-[#0a0a0a] sm:text-3xl">
-            Contract Intelligence Dashboard
-          </h1>
-          <p className="text-xs text-gray-600 font-medium uppercase tracking-wide mt-1">
-            Real-time analysis, risk exposure metrics, and upcoming contractual deadlines
-          </p>
+    <div style={{ maxWidth: '1100px', margin: '0 auto' }} className="animate-fade-in">
+      {/* Page header */}
+      <div className="page-header">
+        <div className="page-header-text">
+          <h1>Dashboard</h1>
+          <p>Contract overview, risk metrics, and upcoming obligations</p>
         </div>
-
-        <div className="flex items-center gap-3">
-          <Link
-            to="/upload"
-            className="btn btn-primary"
-          >
-            <Upload className="h-4 w-4" />
-            <span>Upload Contract</span>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <Link to="/upload" className="btn btn-primary">
+            <Upload size={14} />
+            Upload Contract
           </Link>
-          <Link
-            to="/document-generator"
-            className="btn"
-          >
-            <FileCode2 className="h-4 w-4" />
-            <span>Draft New Agreement</span>
+          <Link to="/document-generator" className="btn">
+            <FileCode2 size={14} />
+            Draft Agreement
           </Link>
         </div>
       </div>
 
-      {/* Metrics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {/* Total Documents */}
-        <div className="border-2 border-[#0a0a0a] bg-white p-5 shadow-[4px_4px_0_#0a0a0a] hover:-translate-y-1 hover:shadow-[6px_6px_0_#0a0a0a] transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 font-mono">Active Contracts</span>
-            <div className="border-2 border-[#0a0a0a] bg-white p-1.5 text-[#0a0a0a]">
-              <FileText className="h-4 w-4" />
-            </div>
+      {/* Stats row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+        <div className="stat-card">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <p className="stat-label">Active Contracts</p>
+            <FileText size={16} style={{ color: 'var(--text-muted)' }} />
           </div>
-          <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-[#0a0a0a] font-mono">{stats.totalDocs}</span>
-            <span className="text-[10px] font-mono text-gray-500 font-bold uppercase">
-              ({stats.completedDocs} parsed)
-            </span>
-          </div>
+          <p className="stat-value">{stats.totalDocs}</p>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{stats.completedDocs} parsed</p>
         </div>
 
-        {/* Total Clauses Analyzed */}
-        <div className="border-2 border-[#0a0a0a] bg-white p-5 shadow-[4px_4px_0_#0a0a0a] hover:-translate-y-1 hover:shadow-[6px_6px_0_#0a0a0a] transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 font-mono">Clauses Identified</span>
-            <div className="border-2 border-[#0a0a0a] bg-white p-1.5 text-[#0a0a0a]">
-              <Layers className="h-4 w-4" />
-            </div>
+        <div className="stat-card">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <p className="stat-label">Clauses Identified</p>
+            <Layers size={16} style={{ color: 'var(--text-muted)' }} />
           </div>
-          <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-[#0a0a0a] font-mono">{stats.totalClauses}</span>
-            <span className="text-[10px] font-mono text-gray-500 font-bold uppercase">portfolio total</span>
-          </div>
+          <p className="stat-value">{stats.totalClauses}</p>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>portfolio total</p>
         </div>
 
-        {/* Flagged / Potential Concern Clauses */}
-        <div className="border-2 border-[#0a0a0a] bg-[#fdf0ef] p-5 shadow-[4px_4px_0_#0a0a0a] hover:-translate-y-1 hover:shadow-[6px_6px_0_#0a0a0a] transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#c0392b] font-mono">Needs Review / High Risk</span>
-            <div className="border-2 border-[#c0392b] bg-white p-1.5 text-[#c0392b]">
-              <AlertTriangle className="h-4 w-4" />
-            </div>
+        <div className="stat-card" style={{ borderLeftColor: stats.highRiskClauses > 0 ? 'var(--danger)' : undefined, borderLeftWidth: stats.highRiskClauses > 0 ? '3px' : '1px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <p className="stat-label" style={{ color: stats.highRiskClauses > 0 ? 'var(--danger)' : undefined }}>Needs Review</p>
+            <AlertTriangle size={16} style={{ color: stats.highRiskClauses > 0 ? 'var(--danger)' : 'var(--text-muted)' }} />
           </div>
-          <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-[#c0392b] font-mono">{stats.highRiskClauses}</span>
-            <span className="text-[10px] font-mono text-[#c0392b] font-bold uppercase">requires review</span>
-          </div>
+          <p className="stat-value" style={{ color: stats.highRiskClauses > 0 ? 'var(--danger)' : undefined }}>{stats.highRiskClauses}</p>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>high-risk clauses</p>
         </div>
 
-        {/* Pending Contractual Obligations */}
-        <div className="border-2 border-[#0a0a0a] bg-white p-5 shadow-[4px_4px_0_#0a0a0a] hover:-translate-y-1 hover:shadow-[6px_6px_0_#0a0a0a] transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 font-mono">Pending Obligations</span>
-            <div className="border-2 border-[#0a0a0a] bg-white p-1.5 text-[#0a0a0a]">
-              <Clock className="h-4 w-4" />
-            </div>
+        <div className="stat-card">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <p className="stat-label">Pending Obligations</p>
+            <Clock size={16} style={{ color: 'var(--text-muted)' }} />
           </div>
-          <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-[#0a0a0a] font-mono">{stats.pendingObligations}</span>
-            <span className="text-[10px] font-mono text-gray-500 font-bold uppercase">unreviewed</span>
-          </div>
+          <p className="stat-value">{stats.pendingObligations}</p>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>unreviewed</p>
         </div>
       </div>
 
-      {/* Main Grid: Recent Contracts & Upcoming Obligations */}
+      {/* Main content */}
       {isNewAccount ? (
-        /* Empty State */
-        <div className="border-[3px] border-[#0a0a0a] bg-white p-12 text-center shadow-[6px_6px_0_#0a0a0a]">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center border-[3px] border-[#0a0a0a] bg-[#f0f0f0] text-[#0a0a0a] mb-4 shadow-[3px_3px_0_#0a0a0a]">
-            <Upload className="h-8 w-8" />
-          </div>
-          <h3 className="text-base font-black uppercase text-[#0a0a0a]">No contracts uploaded yet</h3>
-          <p className="text-xs text-gray-600 mt-2 max-w-sm mx-auto leading-relaxed font-medium">
-            Upload your first PDF agreement to generate structured executive summaries, risk-rated clause breakdowns, and contract completeness checklists.
-          </p>
-          <div className="mt-6 flex items-center justify-center gap-3">
-            <Link
-              to="/upload"
-              className="btn btn-primary"
-            >
-              Upload PDF Contract
-            </Link>
-            <Link
-              to="/document-generator"
-              className="btn"
-            >
-              Generate a Legal Draft
-            </Link>
+        <div className="card">
+          <div className="empty-state">
+            <div className="empty-state-icon">
+              <Upload size={20} />
+            </div>
+            <h3>No contracts yet</h3>
+            <p>
+              Upload your first PDF agreement to generate structured summaries,
+              risk-rated clause breakdowns, and completeness checklists.
+            </p>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+              <Link to="/upload" className="btn btn-primary">Upload Contract</Link>
+              <Link to="/document-generator" className="btn">Generate a Draft</Link>
+            </div>
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Recent Contracts Table (2 cols) */}
-          <div className="lg:col-span-2 border-[3px] border-[#0a0a0a] bg-white p-6 shadow-[6px_6px_0_#0a0a0a]">
-            <div className="flex items-center justify-between pb-4 border-b-2 border-[#0a0a0a] mb-4">
-              <div>
-                <h3 className="text-sm font-black uppercase tracking-wider text-[#0a0a0a]">Recent Contracts</h3>
-                <p className="text-[10px] text-gray-500 uppercase tracking-widest font-mono">Processed legal documents and status</p>
-              </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '16px' }}>
+          {/* Recent contracts table */}
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div className="card-header" style={{ padding: '16px 20px', marginBottom: 0 }}>
+              <h2 style={{ fontSize: '0.9375rem' }}>Recent Contracts</h2>
               <Link
                 to="/documents"
-                className="text-xs font-black uppercase text-[#0a0a0a] hover:underline flex items-center gap-1 font-mono tracking-wider"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '4px',
+                  fontSize: '0.8125rem', color: 'var(--text-secondary)', textDecoration: 'none',
+                  fontWeight: 500,
+                }}
+                onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-primary)')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
               >
-                <span>View All ({stats.totalDocs})</span>
-                <ChevronRight className="h-4 w-4" />
+                View all ({stats.totalDocs})
+                <ChevronRight size={14} />
               </Link>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+            <div className="table-wrapper" style={{ border: 'none', borderRadius: 0 }}>
+              <table>
                 <thead>
-                  <tr className="border-b-2 border-[#0a0a0a] bg-[#f9f9f9] text-[10px] uppercase font-black text-[#0a0a0a] font-mono">
-                    <th className="py-3 px-3">Contract Document</th>
-                    <th className="py-3 px-3">Type</th>
-                    <th className="py-3 px-3">Status</th>
-                    <th className="py-3 px-3 text-right">Actions</th>
+                  <tr>
+                    <th>Document</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 text-[#0a0a0a]">
+                <tbody>
                   {data?.recentDocuments.map((doc) => (
-                    <tr key={doc.id} className="hover:bg-[#f9f9f9] transition-colors">
-                      <td className="py-3.5 px-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-8 w-8 items-center justify-center border-2 border-[#0a0a0a] bg-white text-[#0a0a0a] shrink-0">
-                            <FileText className="h-4 w-4" />
+                    <tr key={doc.id}>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{
+                            width: '32px', height: '32px', borderRadius: 'var(--radius)',
+                            background: 'var(--surface-alt)', display: 'flex',
+                            alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                          }}>
+                            <FileText size={15} style={{ color: 'var(--text-muted)' }} />
                           </div>
-                          <div className="truncate max-w-[200px] sm:max-w-[280px]">
-                            <p className="font-black uppercase text-xs text-[#0a0a0a] truncate">{doc.originalName}</p>
-                            <p className="text-[10px] font-mono text-gray-500 font-semibold">
-                              {(doc.fileSize / 1024).toFixed(0)} KB • {new Date(doc.createdAt).toLocaleDateString()}
+                          <div style={{ minWidth: 0 }}>
+                            <p style={{
+                              fontWeight: 600, fontSize: '0.8125rem', color: 'var(--text-primary)',
+                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                              maxWidth: '220px',
+                            }}>
+                              {doc.originalName}
+                            </p>
+                            <p style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                              {(doc.fileSize / 1024).toFixed(0)} KB &bull; {new Date(doc.createdAt).toLocaleDateString()}
                             </p>
                           </div>
                         </div>
                       </td>
-                      <td className="py-3.5 px-3">
-                        <span className="border border-[#0a0a0a] bg-[#f0f0f0] px-2 py-0.5 text-[10px] font-black uppercase font-mono">
-                          {doc.summary?.contractType || 'General Contract'}
+                      <td>
+                        <span className="badge badge-default">
+                          {doc.summary?.contractType || 'General'}
                         </span>
                       </td>
-                      <td className="py-3.5 px-3">
-                        {doc.status === 'COMPLETED' && ['READY', 'KEYWORD_READY'].includes(doc.ragStatus || '') ? (
-                          <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase text-[#27ae60] font-mono">
-                            <span className="h-2 w-2 rounded-full bg-[#27ae60]"></span>
+                      <td>
+                        {['READY', 'KEYWORD_READY'].includes(doc.ragStatus || '') ? (
+                          <span className="badge badge-success">
+                            <span className="status-dot status-dot-success" />
                             {doc.ragStatus === 'KEYWORD_READY' ? 'Keyword ready' : 'Ready'}
                           </span>
                         ) : doc.status === 'PROCESSING' ? (
-                          <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase text-[#d35400] font-mono animate-pulse">
-                            <span className="h-2 w-2 rounded-full bg-[#d35400]"></span>
-                            {doc.ragStatus === 'INDEXING' ? 'Indexing...' : 'Extracting...'}
+                          <span className="badge badge-warning">
+                            <span className="status-dot status-dot-warning" />
+                            {doc.ragStatus === 'INDEXING' ? 'Indexing' : 'Processing'}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase text-[#c0392b] font-mono">
+                          <span className="badge badge-danger">
                             {doc.ragStatus === 'REVIEW_REQUIRED' ? 'Review required' : doc.status === 'FAILED' ? 'Failed' : 'Index required'}
                           </span>
                         )}
                       </td>
-                      <td className="py-3.5 px-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Link
-                            to={`/documents/${doc.id}/summary`}
-                            className="btn btn-sm btn-primary py-1 px-2.5 text-[10px]"
-                          >
-                            Summary
-                          </Link>
-                          <Link
-                            to={`/documents/${doc.id}/chat`}
-                            className="btn btn-sm py-1 px-2.5 text-[10px]"
-                          >
-                            Chat
-                          </Link>
+                      <td>
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                          <Link to={`/documents/${doc.id}/summary`} className="btn btn-sm">Summary</Link>
+                          <Link to={`/documents/${doc.id}/chat`} className="btn btn-sm">Chat</Link>
                         </div>
                       </td>
                     </tr>
@@ -260,68 +209,82 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Extracted Obligations & Deadlines (1 col) */}
-          <div className="border-[3px] border-[#0a0a0a] bg-white p-6 shadow-[6px_6px_0_#0a0a0a] flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between pb-4 border-b-2 border-[#0a0a0a] mb-4">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-[#0a0a0a]" />
-                  <h3 className="text-sm font-black uppercase tracking-wider text-[#0a0a0a]">Upcoming Obligations</h3>
-                </div>
-                <span className="text-[10px] text-gray-500 font-mono font-bold uppercase">Feed</span>
+          {/* Upcoming obligations */}
+          <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div className="card-header" style={{ padding: '16px 20px', marginBottom: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                <Calendar size={15} style={{ color: 'var(--text-muted)' }} />
+                <h2 style={{ fontSize: '0.9375rem' }}>Upcoming Obligations</h2>
               </div>
+            </div>
 
+            <div style={{ flex: 1, overflowY: 'auto' }}>
               {data?.upcomingObligations && data.upcomingObligations.length > 0 ? (
-                <div className="space-y-3">
+                <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {data.upcomingObligations.map((ob) => (
                     <div
                       key={ob.id}
-                      className="border-2 border-[#0a0a0a] bg-[#f9f9f9] p-3 text-xs shadow-[2px_2px_0_#0a0a0a] hover:-translate-y-0.5 transition-all"
+                      style={{
+                        padding: '12px 14px',
+                        background: 'var(--surface)',
+                        borderRadius: 'var(--radius)',
+                        border: '1px solid var(--border)',
+                      }}
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="border border-[#0a0a0a] bg-white px-1.5 py-0.5 text-[9px] font-black uppercase font-mono">
-                          {ob.category}
-                        </span>
-                        <span className="text-[10px] font-black uppercase text-[#0a0a0a] font-mono">
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <span className="badge badge-default">{ob.category}</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
                           {ob.dueDateOrPeriod || 'Notice-based'}
                         </span>
                       </div>
-                      <p className="mt-2 text-[#0a0a0a] font-medium line-clamp-2 leading-relaxed">
+                      <p style={{ fontSize: '0.8125rem', color: 'var(--text-primary)', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                         {ob.description}
                       </p>
-                      <div className="mt-2.5 flex items-center justify-between text-[10px] text-gray-600 font-mono font-bold">
-                        <span>Party: {ob.responsibleParty || 'Specified'}</span>
+                      <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                          {ob.responsibleParty || 'Specified party'}
+                        </span>
                         <Link
                           to={`/documents/${ob.documentId}/obligations`}
-                          className="text-[#0a0a0a] underline hover:no-underline font-black uppercase"
+                          style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)', textDecoration: 'none' }}
+                          onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+                          onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
                         >
-                          Source →
+                          View →
                         </Link>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="py-8 text-center text-xs text-gray-500 font-medium">
-                  <p className="font-bold uppercase">No pending obligations extracted.</p>
-                  <p className="text-[11px] text-gray-400 mt-1">Upload an agreement to scan deadlines.</p>
+                <div className="empty-state" style={{ padding: '32px 16px' }}>
+                  <p style={{ fontSize: '0.8125rem' }}>No pending obligations</p>
+                  <p style={{ fontSize: '0.75rem' }}>Upload an agreement to scan deadlines</p>
                 </div>
               )}
             </div>
 
-            <div className="mt-5 pt-4 border-t-2 border-[#0a0a0a]">
+            {/* Generator prompt */}
+            <div style={{ padding: '12px', borderTop: '1px solid var(--border)' }}>
               <Link
                 to="/document-generator"
-                className="flex items-center justify-between border-2 border-[#0a0a0a] bg-[#f9f9f9] p-3 shadow-[2px_2px_0_#0a0a0a] hover:bg-[#0a0a0a] hover:text-white transition-all group"
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '10px 12px', background: 'var(--surface)', borderRadius: 'var(--radius)',
+                  border: '1px solid var(--border)', textDecoration: 'none',
+                  transition: 'background var(--transition)',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-alt)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'var(--surface)')}
               >
-                <div className="flex items-center gap-2.5">
-                  <FileCode2 className="h-4 w-4 text-[#0a0a0a] group-hover:text-white" />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <FileCode2 size={15} style={{ color: 'var(--text-muted)' }} />
                   <div>
-                    <p className="text-xs font-black uppercase">Need a new contract?</p>
-                    <p className="text-[10px] text-gray-500 group-hover:text-gray-300 font-mono">Generate NDAs, MSAs & Offers</p>
+                    <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>Need a new contract?</p>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Generate NDAs, MSAs & Offers</p>
                   </div>
                 </div>
-                <ArrowRight className="h-4 w-4 text-[#0a0a0a] group-hover:text-white" />
+                <ArrowRight size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
               </Link>
             </div>
           </div>

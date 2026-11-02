@@ -4,13 +4,10 @@ import {
   SearchCode,
   AlertTriangle,
   CheckCircle,
-  Flag,
-  Filter,
-  Shield,
   HelpCircle,
-  FileText,
-  ChevronDown,
+  Filter,
   Info,
+  ChevronDown,
 } from 'lucide-react';
 import ApiService from '../services/api.js';
 import { DocumentRecord, ClauseFinding } from '../types/index.js';
@@ -64,30 +61,30 @@ export const DocumentClausesPage: React.FC = () => {
     switch (risk) {
       case 'High':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 border border-red-500/30 px-2.5 py-0.5 text-[10px] font-semibold text-red-400">
-            <AlertTriangle className="h-3 w-3" />
+          <span className="badge badge-danger" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            <AlertTriangle size={12} />
             High Risk
           </span>
         );
       case 'Medium':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 text-[10px] font-semibold text-amber-300">
-            <AlertTriangle className="h-3 w-3" />
+          <span className="badge badge-warning" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            <AlertTriangle size={12} />
             Medium Risk
           </span>
         );
       case 'Needs Review':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/15 border border-violet-500/30 px-2.5 py-0.5 text-[10px] font-semibold text-violet-300">
-            <HelpCircle className="h-3 w-3" />
+          <span className="badge badge-info" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            <HelpCircle size={12} />
             Needs Review
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-400">
-            <CheckCircle className="h-3 w-3" />
-            Standard / Low Risk
+          <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            <CheckCircle size={12} />
+            Low Risk
           </span>
         );
     }
@@ -107,191 +104,243 @@ export const DocumentClausesPage: React.FC = () => {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 animate-fadeUp">
+    <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
       <DocumentNavHeader document={document} />
 
-      {/* Filter and Disclaimer Strip */}
-      <div className="border-[3px] border-[#0a0a0a] bg-white p-6 shadow-[6px_6px_0_#0a0a0a] space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b-2 border-[#0a0a0a]">
+      {/* Filter and Overview Card */}
+      <div className="card" style={{ marginBottom: '20px' }}>
+        <div className="card-header" style={{ marginBottom: '14px', paddingBottom: '12px' }}>
           <div>
-            <h2 className="text-base font-black uppercase tracking-wide text-[#0a0a0a]">Clause Analysis & Risk Assessment</h2>
-            <p className="text-[11px] text-gray-600 font-medium uppercase tracking-wider">
-              Categorized clause provisions, plain-language translation, and counsel review checkpoints
+            <h2 style={{ fontSize: '1.0625rem' }}>Clause Analysis & Risk Assessment</h2>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              Categorized contract clauses, plain-language translations, and review checkpoints
             </p>
           </div>
-
-          <div className="flex items-center gap-2">
-            <span className="border-2 border-[#27ae60] bg-[#eafaf1] text-[#27ae60] px-2 py-1 text-[11px] font-black uppercase font-mono">
-              Neural AI (Llama 3.3 70B)
-            </span>
-            <span className="border-2 border-[#0a0a0a] bg-[#0a0a0a] text-white px-2.5 py-1 text-xs font-black uppercase font-mono">
-              {clauses.length} {clauses.length === 1 ? 'CLAUSE' : 'CLAUSES'} IDENTIFIED
-            </span>
-          </div>
+          <span className="badge badge-default" style={{ fontSize: '0.75rem' }}>
+            {clauses.length} {clauses.length === 1 ? 'clause' : 'clauses'} identified
+          </span>
         </div>
 
         {/* Filter Controls */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1.5 text-xs font-black uppercase text-gray-500 font-mono">
-            <Filter className="h-3.5 w-3.5 text-[#0a0a0a]" />
-            <span>Category:</span>
-          </div>
-
-          <div className="flex flex-wrap gap-1.5">
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginRight: '4px' }}>
+              <Filter size={13} style={{ color: 'var(--text-muted)' }} />
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                Category:
+              </span>
+            </div>
             {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setCategoryFilter(cat)}
-                className={`border-2 border-[#0a0a0a] px-2.5 py-1 text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer font-mono ${
-                  categoryFilter === cat
-                    ? 'bg-[#0a0a0a] text-white shadow-[2px_2px_0_#888]'
-                    : 'bg-white text-[#0a0a0a] hover:bg-[#f0f0f0]'
-                }`}
+                className="btn btn-sm"
+                style={{
+                  padding: '4px 10px',
+                  fontSize: '0.75rem',
+                  background: categoryFilter === cat ? 'var(--black)' : 'var(--white)',
+                  color: categoryFilter === cat ? 'var(--white)' : 'var(--text-secondary)',
+                  borderColor: categoryFilter === cat ? 'var(--black)' : 'var(--border)',
+                }}
               >
-                {cat === 'ALL' ? 'ALL CATEGORIES' : cat}
+                {cat === 'ALL' ? 'All' : cat}
               </button>
             ))}
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
-            <span className="text-[11px] font-black uppercase text-gray-500 font-mono">Risk Level:</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+              Risk:
+            </span>
             <select
               value={riskFilter}
               onChange={(e) => setRiskFilter(e.target.value)}
-              className="border-2 border-[#0a0a0a] bg-white px-2.5 py-1 text-xs font-black uppercase text-[#0a0a0a] font-mono focus:outline-none focus:shadow-[2px_2px_0_#0a0a0a]"
+              className="select"
+              style={{ width: 'auto', padding: '5px 10px', fontSize: '0.8125rem' }}
             >
-              <option value="ALL">ALL RISK LEVELS</option>
-              <option value="High">HIGH RISK</option>
-              <option value="Medium">MEDIUM RISK</option>
-              <option value="Low">LOW RISK</option>
-              <option value="Needs Review">NEEDS REVIEW</option>
+              <option value="ALL">All Risk Levels</option>
+              <option value="High">High Risk</option>
+              <option value="Medium">Medium Risk</option>
+              <option value="Low">Low Risk</option>
+              <option value="Needs Review">Needs Review</option>
             </select>
           </div>
         </div>
       </div>
 
       {/* Safeguard Notice */}
-      <div className="border-2 border-[#0a0a0a] bg-[#f9f9f9] p-3.5 flex items-start gap-3 text-xs text-gray-700 shadow-[2px_2px_0_#0a0a0a]">
-        <Info className="h-4 w-4 text-[#0a0a0a] shrink-0 mt-0.5" />
-        <p className="font-medium">
-          <span className="font-black uppercase text-[#0a0a0a] font-mono">Legal Safeguard:</span> Risk ratings are heuristic and semantic analytical indicators to assist human contract review. They do not constitute formal legal determinations of enforceability or statutory validity.
+      <div className="alert alert-info" style={{ marginBottom: '20px' }}>
+        <Info size={16} style={{ flexShrink: 0 }} />
+        <p style={{ fontSize: '0.8125rem', lineHeight: 1.5 }}>
+          Risk indicators are automated checks to assist human contract review. They do not constitute formal legal counsel or statutory advice.
         </p>
       </div>
 
       {/* Clauses List */}
       {isLoading ? (
-        <div className="flex h-64 items-center justify-center">
-          <div className="spinner"></div>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '240px' }}>
+          <div className="spinner" />
         </div>
       ) : clauses.length === 0 ? (
-        <div className="border-[3px] border-[#0a0a0a] bg-white p-12 text-center shadow-[6px_6px_0_#0a0a0a]">
-          <SearchCode className="mx-auto h-12 w-12 text-gray-400 mb-3" />
-          <h3 className="text-sm font-black uppercase text-[#0a0a0a]">No clauses matching criteria</h3>
-          <p className="text-xs text-gray-500 mt-1 uppercase font-mono">
-            Try adjusting your category or risk level filters.
-          </p>
+        <div className="card empty-state" style={{ padding: '48px 20px', textAlign: 'center' }}>
+          <div className="empty-state-icon">
+            <SearchCode size={22} />
+          </div>
+          <h3>No clauses matching filters</h3>
+          <p>Try switching to "All" categories or risk levels to view all detected provisions.</p>
         </div>
       ) : (
-        <div className="space-y-5">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {clauses.map((clause) => (
-            <div
-              key={clause.id}
-              className="border-2 border-[#0a0a0a] bg-white p-5 space-y-4 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_#0a0a0a] shadow-[4px_4px_0_#0a0a0a] transition-all"
-            >
-              {/* Card Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b-2 border-[#0a0a0a]">
-                <div className="flex items-center gap-2.5">
-                  <span className="border border-[#0a0a0a] bg-[#f0f0f0] px-2 py-0.5 text-[10px] font-black uppercase font-mono text-[#0a0a0a]">
-                    {clause.category}
-                  </span>
-                  <h3 className="text-sm font-black uppercase tracking-wide text-[#0a0a0a]">{clause.title}</h3>
+            <div key={clause.id} className="card" style={{ padding: '20px' }}>
+              {/* Header */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  paddingBottom: '14px',
+                  marginBottom: '14px',
+                  borderBottom: '1px solid var(--border)',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span className="badge badge-default">{clause.category}</span>
+                  <h3 style={{ fontSize: '0.9375rem', fontWeight: 600 }}>{clause.title}</h3>
                   {clause.pageNumber && (
-                    <span className="border border-gray-300 bg-white px-1.5 py-0.2 text-[10px] font-mono font-bold text-gray-600 uppercase">
-                      PAGE {clause.pageNumber}
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Page {clause.pageNumber}
                     </span>
                   )}
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   {getRiskBadge(clause.riskLevel)}
 
-                  {/* Review Status Pill / Selector */}
-                  <div className="flex items-center border-2 border-[#0a0a0a] bg-white p-0.5">
-                    <button
-                      onClick={() => handleStatusUpdate(clause.id, 'APPROVED')}
-                      disabled={updatingClauseId === clause.id}
-                      className={`px-2 py-0.5 text-[10px] font-black uppercase font-mono transition-colors cursor-pointer ${
-                        clause.reviewStatus === 'APPROVED'
-                          ? 'bg-[#27ae60] text-white'
-                          : 'text-[#0a0a0a] hover:bg-gray-100'
-                      }`}
-                      title="Approve Clause"
-                    >
-                      Approved
-                    </button>
-                    <button
-                      onClick={() => handleStatusUpdate(clause.id, 'FLAGGED')}
-                      disabled={updatingClauseId === clause.id}
-                      className={`px-2 py-0.5 text-[10px] font-black uppercase font-mono transition-colors cursor-pointer ${
-                        clause.reviewStatus === 'FLAGGED'
-                          ? 'bg-[#c0392b] text-white'
-                          : 'text-[#0a0a0a] hover:bg-gray-100'
-                      }`}
-                      title="Flag Clause"
-                    >
-                      Flagged
-                    </button>
-                    <button
-                      onClick={() => handleStatusUpdate(clause.id, 'PENDING')}
-                      disabled={updatingClauseId === clause.id}
-                      className={`px-2 py-0.5 text-[10px] font-black uppercase font-mono transition-colors cursor-pointer ${
-                        clause.reviewStatus === 'PENDING'
-                          ? 'bg-[#0a0a0a] text-white'
-                          : 'text-[#0a0a0a] hover:bg-gray-100'
-                      }`}
-                      title="Pending Review"
-                    >
-                      Pending
-                    </button>
+                  {/* Review Status Segmented Control */}
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius)',
+                      overflow: 'hidden',
+                      background: 'var(--surface)',
+                    }}
+                  >
+                    {[
+                      { key: 'APPROVED', label: 'Approved', activeBg: 'var(--success)', activeColor: '#ffffff' },
+                      { key: 'FLAGGED', label: 'Flagged', activeBg: 'var(--danger)', activeColor: '#ffffff' },
+                      { key: 'PENDING', label: 'Pending', activeBg: 'var(--black)', activeColor: '#ffffff' },
+                    ].map((s) => {
+                      const isSelected = clause.reviewStatus === s.key;
+                      return (
+                        <button
+                          key={s.key}
+                          onClick={() => handleStatusUpdate(clause.id, s.key)}
+                          disabled={updatingClauseId === clause.id}
+                          style={{
+                            padding: '4px 9px',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            border: 'none',
+                            background: isSelected ? s.activeBg : 'transparent',
+                            color: isSelected ? s.activeColor : 'var(--text-secondary)',
+                            cursor: 'pointer',
+                            transition: 'background var(--transition)',
+                          }}
+                        >
+                          {s.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
 
-              {/* Original Excerpt Quote */}
-              <div className="border-2 border-[#0a0a0a] bg-[#f9f9f9] p-3.5 text-xs">
-                <div className="flex items-center justify-between text-[10px] text-gray-500 uppercase font-black font-mono mb-1.5">
-                  <span>Contract Verbatim Excerpt</span>
-                  {clause.pageNumber && <span>SOURCE PAGE: {clause.pageNumber}</span>}
-                </div>
-                <blockquote className="font-mono text-[#0a0a0a] text-[11px] leading-relaxed border-l-[3px] border-[#0a0a0a] pl-3 py-0.5">
+              {/* Original Excerpt */}
+              <div
+                style={{
+                  padding: '12px 14px',
+                  background: 'var(--surface)',
+                  borderRadius: 'var(--radius)',
+                  borderLeft: '3px solid var(--border-strong)',
+                  marginBottom: '14px',
+                }}
+              >
+                <p style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.04em' }}>
+                  Contract Excerpt {clause.pageNumber ? `(Page ${clause.pageNumber})` : ''}
+                </p>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--text-primary)', lineHeight: 1.6, fontStyle: 'italic' }}>
                   "{clause.excerpt}"
-                </blockquote>
+                </p>
               </div>
 
-              {/* Plain Language & Potential Concern */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                <div className="border-2 border-gray-200 bg-white p-3.5 border-l-4 border-l-[#0a0a0a]">
-                  <p className="font-black uppercase tracking-wider text-xs text-[#0a0a0a] mb-1 font-mono">Plain Language Translation</p>
-                  <p className="text-[#0a0a0a] leading-relaxed font-medium">
+              {/* Analysis Columns */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
+                <div
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: 'var(--radius)',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                  }}
+                >
+                  <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                    Plain Language Meaning
+                  </p>
+                  <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                     {clause.plainLanguageExplanation}
                   </p>
                 </div>
 
-                <div className="border-2 border-gray-200 bg-[#fefdf0] p-3.5 border-l-4 border-l-[#d35400]">
-                  <p className="font-black uppercase tracking-wider text-xs text-[#d35400] mb-1 font-mono">Potential Concern / Ambiguity</p>
-                  <p className="text-[#0a0a0a] leading-relaxed font-medium">
-                    {clause.potentialConcern || 'No abnormal risk patterns detected in this clause.'}
+                <div
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: 'var(--radius)',
+                    background: clause.potentialConcern ? 'var(--warning-bg)' : 'var(--surface)',
+                    border: clause.potentialConcern ? '1px solid #f6e58d' : '1px solid var(--border)',
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      color: clause.potentialConcern ? 'var(--warning)' : 'var(--text-primary)',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    Potential Concern / Risk Note
+                  </p>
+                  <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                    {clause.potentialConcern || 'No notable risk patterns detected in this clause.'}
                   </p>
                 </div>
               </div>
 
-              {/* Suggested Question for Legal Counsel */}
+              {/* Suggested Review Question */}
               {clause.reviewQuestion && (
-                <div className="border-2 border-[#1a5276] bg-[#eaf4fb] p-3.5 text-xs flex items-start gap-2.5">
-                  <HelpCircle className="h-4 w-4 text-[#1a5276] shrink-0 mt-0.5" />
+                <div
+                  style={{
+                    marginTop: '12px',
+                    padding: '10px 14px',
+                    borderRadius: 'var(--radius)',
+                    background: 'var(--info-bg)',
+                    border: '1px solid #d0e1fd',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '8px',
+                  }}
+                >
+                  <HelpCircle size={15} style={{ color: 'var(--info)', flexShrink: 0, marginTop: '2px' }} />
                   <div>
-                    <span className="font-black uppercase tracking-wider text-[11px] text-[#1a5276] font-mono">Suggested Review Question:</span>
-                    <p className="text-[#0a0a0a] mt-0.5 font-medium leading-relaxed">{clause.reviewQuestion}</p>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--info)' }}>
+                      Suggested Question for Counsel:
+                    </span>
+                    <p style={{ fontSize: '0.8125rem', color: 'var(--text-primary)', marginTop: '2px', lineHeight: 1.5 }}>
+                      {clause.reviewQuestion}
+                    </p>
                   </div>
                 </div>
               )}

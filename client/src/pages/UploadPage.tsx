@@ -1,17 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  UploadCloud,
-  FileText,
-  AlertCircle,
-  CheckCircle2,
-  Shield,
-  FileCheck,
-  Sparkles,
-  ArrowRight,
-  Info,
-  ScanText,
-  Languages,
+  UploadCloud, FileText, AlertCircle, CheckCircle2,
+  Shield, ArrowRight, Info, ScanText, Languages,
 } from 'lucide-react';
 import ApiService from '../services/api.js';
 
@@ -30,30 +21,24 @@ export const UploadPage: React.FC = () => {
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
-    }
+    if (e.type === 'dragenter' || e.type === 'dragover') setDragActive(true);
+    else if (e.type === 'dragleave') setDragActive(false);
   };
 
   const validateAndSetFile = (file: File) => {
     setError(null);
     setWarning(null);
-
     if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
       setError('Invalid format: Only PDF documents (.pdf) are supported.');
       setSelectedFile(null);
       return;
     }
-
-    const maxSize = 15 * 1024 * 1024; // 15MB
+    const maxSize = 15 * 1024 * 1024;
     if (file.size > maxSize) {
-      setError(`File exceeds maximum size limit of 15MB (${(file.size / (1024 * 1024)).toFixed(1)}MB).`);
+      setError(`File exceeds the 15 MB limit (${(file.size / (1024 * 1024)).toFixed(1)} MB).`);
       setSelectedFile(null);
       return;
     }
-
     setSelectedFile(file);
   };
 
@@ -61,36 +46,27 @@ export const UploadPage: React.FC = () => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      validateAndSetFile(e.dataTransfer.files[0]);
-    }
+    if (e.dataTransfer.files?.[0]) validateAndSetFile(e.dataTransfer.files[0]);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      validateAndSetFile(e.target.files[0]);
-    }
+    if (e.target.files?.[0]) validateAndSetFile(e.target.files[0]);
   };
 
   const handleUpload = async () => {
     if (!selectedFile) return;
-
     setError(null);
     setWarning(null);
     setIsProcessing(true);
 
     try {
-      setProcessingStage('Securely uploading PDF file to storage...');
+      setProcessingStage('Uploading PDF…');
       const response = await ApiService.uploadDocument(selectedFile);
-
       let doc = response.document;
 
-      // Handle async background job pipeline with live progress updates (e.g. 5/34 pages completed)
       if (response.jobId && response.status === 'PROCESSING') {
         const pollInterval = 600;
         let jobDone = false;
-
         for (let attempt = 0; !jobDone && attempt < 1800; attempt++) {
           await new Promise((r) => setTimeout(r, pollInterval));
           const jobStatus = await ApiService.getJobStatus(response.jobId);
@@ -109,15 +85,12 @@ export const UploadPage: React.FC = () => {
         if (!jobDone) throw new Error('Processing continues in the background. Check the document list for progress.');
       }
 
-      setProcessingStage('Preserving English & Marathi page boundaries and structuring contract chunks...');
+      setProcessingStage('Structuring contract chunks…');
       await new Promise((r) => setTimeout(r, 400));
 
-      // If document was scanned or user requested verification, navigate to OCR Preview
       const isScannedOrFlagged =
-        doc.ocrStatus === 'PENDING_REVIEW' ||
-        doc.ocrStatus === 'OCR_COMPLETED' ||
-        (doc.ocrResult && doc.ocrResult.scannedPagesCount > 0) ||
-        !!doc.errorMessage;
+        doc.ocrStatus === 'PENDING_REVIEW' || doc.ocrStatus === 'OCR_COMPLETED' ||
+        (doc.ocrResult && doc.ocrResult.scannedPagesCount > 0) || !!doc.errorMessage;
 
       if (previewOcrFirst || isScannedOrFlagged) {
         navigate(`/documents/${doc.id}/ocr-preview`);
@@ -131,165 +104,172 @@ export const UploadPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-fadeUp">
-      <div>
-        <h1 className="text-2xl font-black uppercase tracking-tight text-[#0a0a0a] sm:text-3xl">
-          Upload Contract for Intelligence Scan
-        </h1>
-        <p className="text-xs text-gray-600 font-medium mt-1 uppercase tracking-wide">
-          Upload commercial agreements, NDAs, or employment contracts for automated clause breakdown and risk identification.
-        </p>
+    <div style={{ maxWidth: '760px', margin: '0 auto' }} className="animate-fade-in">
+      <div className="page-header">
+        <div className="page-header-text">
+          <h1>Upload Contract</h1>
+          <p>Upload a PDF agreement for automated clause analysis and risk identification</p>
+        </div>
       </div>
 
-      {/* Main Upload Zone */}
-      <div className="border-[3px] border-[#0a0a0a] bg-white p-8 shadow-[6px_6px_0_#0a0a0a]">
-        <form
+      {/* Drop zone */}
+      <div className="card" style={{ marginBottom: '16px' }}>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf,application/pdf"
+          onChange={handleFileChange}
+          style={{ display: 'none' }}
+        />
+
+        <div
+          onClick={() => !isProcessing && fileInputRef.current?.click()}
           onDragEnter={handleDrag}
-          onSubmit={(e) => e.preventDefault()}
-          className="relative"
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '48px 24px',
+            border: `2px dashed ${dragActive ? 'var(--black)' : 'var(--border-strong)'}`,
+            borderRadius: 'var(--radius)',
+            background: dragActive ? 'var(--surface-alt)' : 'var(--surface)',
+            cursor: isProcessing ? 'default' : 'pointer',
+            textAlign: 'center',
+            transition: 'border-color var(--transition), background var(--transition)',
+          }}
+          onMouseEnter={e => { if (!isProcessing) (e.currentTarget as HTMLElement).style.borderColor = 'var(--black)'; }}
+          onMouseLeave={e => { if (!dragActive) (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; }}
         >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf,application/pdf"
-            onChange={handleFileChange}
-            className="hidden"
-          />
-
           <div
-            onClick={() => fileInputRef.current?.click()}
-            className={`group flex flex-col items-center justify-center border-2 border-dashed p-12 text-center cursor-pointer transition-all ${
-              dragActive
-                ? 'border-[#0a0a0a] bg-[#f0f0f0]'
-                : 'border-gray-300 bg-[#f9f9f9] hover:border-[#0a0a0a] hover:bg-white'
-            }`}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
+            style={{
+              width: '52px', height: '52px', borderRadius: '50%',
+              background: 'var(--surface-alt)', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', marginBottom: '16px',
+            }}
           >
-            <div className="flex h-16 w-16 items-center justify-center border-[3px] border-[#0a0a0a] bg-white text-[#0a0a0a] group-hover:bg-[#0a0a0a] group-hover:text-white transition-all transform group-hover:-translate-y-1 mb-4 shadow-[2px_2px_0_#0a0a0a]">
-              <UploadCloud className="h-8 w-8" />
-            </div>
-
-            <h3 className="text-sm font-black uppercase tracking-wider text-[#0a0a0a]">
-              Drag and drop your PDF contract here, or{' '}
-              <span className="underline decoration-2">browse files</span>
-            </h3>
-            <p className="text-xs text-gray-500 font-mono font-medium mt-2">
-              Supports searchable PDFs, scanned paper contracts, mobile photos, and mixed English-Marathi legal deeds
-            </p>
-
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-6 text-[11px] font-bold uppercase tracking-wider text-gray-600">
-              <span className="flex items-center gap-1.5">
-                <ScanText className="h-4 w-4 text-[#0a0a0a]" />
-                PaddleOCR Engine
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Languages className="h-4 w-4 text-[#0a0a0a]" />
-                English & मराठी Support
-              </span>
-              <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="h-4 w-4 text-[#27ae60]" />
-                Page Boundary Citations
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Shield className="h-4 w-4 text-[#0a0a0a]" />
-                Secure Processing
-              </span>
-            </div>
+            <UploadCloud size={24} style={{ color: 'var(--text-muted)' }} />
           </div>
-        </form>
 
-        {/* Selected File Details */}
+          <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>
+            Drag & drop your PDF, or <span style={{ textDecoration: 'underline', textDecorationStyle: 'dashed' }}>browse</span>
+          </h3>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', maxWidth: '380px', lineHeight: 1.6 }}>
+            Supports searchable PDFs, scanned contracts, and mixed English-Marathi legal documents. Max 15 MB.
+          </p>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginTop: '20px', justifyContent: 'center' }}>
+            {[
+              { icon: ScanText, text: 'PaddleOCR Engine' },
+              { icon: Languages, text: 'English & मराठी' },
+              { icon: CheckCircle2, text: 'Page Citations' },
+              { icon: Shield, text: 'Secure Processing' },
+            ].map(({ icon: Icon, text }) => (
+              <span key={text} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+                <Icon size={13} style={{ color: 'var(--text-secondary)' }} />
+                {text}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Selected file */}
         {selectedFile && !isProcessing && (
-          <div className="mt-6 border-2 border-[#0a0a0a] bg-[#f9f9f9] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-[3px_3px_0_#0a0a0a] animate-fadeUp">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center border-2 border-[#0a0a0a] bg-white text-[#0a0a0a]">
-                <FileText className="h-5 w-5" />
+          <div
+            style={{
+              marginTop: '12px', padding: '14px 16px',
+              background: 'var(--surface)', borderRadius: 'var(--radius)',
+              border: '1px solid var(--border)',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap',
+            }}
+            className="animate-fade-in"
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '36px', height: '36px', borderRadius: 'var(--radius)', background: 'var(--white)',
+                border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <FileText size={16} style={{ color: 'var(--text-muted)' }} />
               </div>
               <div>
-                <p className="text-xs font-black uppercase tracking-wide text-[#0a0a0a]">{selectedFile.name}</p>
-                <p className="text-[11px] font-mono text-gray-500 font-semibold">
-                  {(selectedFile.size / 1024).toFixed(1)} KB • PDF Document
+                <p style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-primary)' }}>{selectedFile.name}</p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  {(selectedFile.size / 1024).toFixed(1)} KB &bull; PDF Document
                 </p>
-                <label className="flex items-center gap-2 cursor-pointer text-[11px] font-mono text-[#0a0a0a] font-bold mt-1 select-none">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', cursor: 'pointer', fontSize: '0.8125rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
                   <input
                     type="checkbox"
                     checked={previewOcrFirst}
                     onChange={(e) => setPreviewOcrFirst(e.target.checked)}
-                    className="h-3.5 w-3.5 accent-[#0a0a0a] rounded-none cursor-pointer"
+                    style={{ accentColor: 'var(--black)' }}
                   />
-                  <span>Review OCR text preview before AI analysis</span>
+                  Review OCR text before analysis
                 </label>
               </div>
             </div>
 
-            <button
-              onClick={handleUpload}
-              className="btn btn-primary"
-            >
-              <span>{previewOcrFirst ? 'Process & Preview OCR' : 'Start Instant Analysis'}</span>
-              <ArrowRight className="h-3.5 w-3.5" />
+            <button onClick={handleUpload} className="btn btn-primary" style={{ flexShrink: 0 }}>
+              {previewOcrFirst ? 'Process & Preview OCR' : 'Analyse Now'}
+              <ArrowRight size={14} />
             </button>
           </div>
         )}
 
-        {/* Processing State with Live Steps */}
+        {/* Processing */}
         {isProcessing && (
-          <div className="mt-6 border-2 border-[#0a0a0a] bg-[#f9f9f9] p-8 text-center space-y-4 animate-fadeUp">
-            <div className="spinner mx-auto"></div>
-            <div>
-              <p className="text-xs font-black uppercase tracking-widest text-[#0a0a0a]">{processingStage}</p>
-              <p className="text-[11px] text-gray-500 uppercase tracking-wide mt-1">
-                Please wait while Legal Buddy ingests and indexes the contractual provisions...
-              </p>
-            </div>
+          <div
+            style={{
+              marginTop: '12px', padding: '24px', textAlign: 'center',
+              background: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)',
+            }}
+          >
+            <div className="spinner" style={{ margin: '0 auto 14px' }} />
+            <p style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
+              {processingStage || 'Processing…'}
+            </p>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+              Please wait while Legal Buddy ingests and indexes the contract.
+            </p>
           </div>
         )}
 
-        {/* Error Alert */}
+        {/* Errors / warnings */}
         {error && (
-          <div className="mt-5 flex items-start gap-3 border-2 border-[#c0392b] bg-[#fdf0ef] p-4 text-xs text-[#c0392b] font-medium">
-            <AlertCircle className="h-5 w-5 shrink-0 text-[#c0392b]" />
+          <div className="alert alert-error" style={{ marginTop: '12px' }}>
+            <AlertCircle size={15} style={{ flexShrink: 0, marginTop: '1px' }} />
             <div>
-              <p className="font-black uppercase tracking-wider text-[#c0392b]">Upload / Processing Error</p>
-              <p className="mt-0.5">{error}</p>
+              <p style={{ fontWeight: 600 }}>Upload Error</p>
+              <p style={{ marginTop: '2px', lineHeight: 1.5 }}>{error}</p>
             </div>
           </div>
         )}
 
-        {/* Warning Alert (e.g. Scanned PDF) */}
         {warning && (
-          <div className="mt-5 flex items-start gap-3 border-2 border-[#b7950b] bg-[#fefdf0] p-4 text-xs text-[#0a0a0a]">
-            <Info className="h-5 w-5 shrink-0 text-[#b7950b]" />
+          <div className="alert alert-warning" style={{ marginTop: '12px' }}>
+            <Info size={15} style={{ flexShrink: 0, marginTop: '1px' }} />
             <div>
-              <p className="font-black uppercase tracking-wider text-[#b7950b]">Scanned / Image Document Notice</p>
-              <p className="mt-0.5 text-gray-700">{warning}</p>
+              <p style={{ fontWeight: 600 }}>Scanned Document Notice</p>
+              <p style={{ marginTop: '2px', lineHeight: 1.5, color: 'var(--text-primary)' }}>{warning}</p>
             </div>
           </div>
         )}
       </div>
 
-      {/* Contract Categories Guidance */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="border-2 border-[#0a0a0a] bg-white p-5 shadow-[4px_4px_0_#0a0a0a] hover:-translate-y-1 hover:shadow-[6px_6px_0_#0a0a0a] transition-all">
-          <p className="font-black uppercase tracking-wider text-xs text-[#0a0a0a]">NDAs & Confidentiality</p>
-          <p className="text-gray-600 mt-2 text-[11px] leading-relaxed font-medium">
-            Identifies mutual vs unilateral definitions, disclosure exclusions, return of materials, and sunset periods.
-          </p>
-        </div>
-        <div className="border-2 border-[#0a0a0a] bg-white p-5 shadow-[4px_4px_0_#0a0a0a] hover:-translate-y-1 hover:shadow-[6px_6px_0_#0a0a0a] transition-all">
-          <p className="font-black uppercase tracking-wider text-xs text-[#0a0a0a]">Master Services & SOWs</p>
-          <p className="text-gray-600 mt-2 text-[11px] leading-relaxed font-medium">
-            Detects liability caps, indemnification allocations, payment Net terms, and IP ownership transfers.
-          </p>
-        </div>
-        <div className="border-2 border-[#0a0a0a] bg-white p-5 shadow-[4px_4px_0_#0a0a0a] hover:-translate-y-1 hover:shadow-[6px_6px_0_#0a0a0a] transition-all">
-          <p className="font-black uppercase tracking-wider text-xs text-[#0a0a0a]">Employment Agreements</p>
-          <p className="text-gray-600 mt-2 text-[11px] leading-relaxed font-medium">
-            Highlights probation clauses, termination notice periods, non-compete covenants, and IP assignment.
-          </p>
-        </div>
+      {/* Supported types */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+        {[
+          { title: 'NDAs & Confidentiality', desc: 'Identifies mutual vs unilateral definitions, disclosure exclusions, and sunset periods.' },
+          { title: 'Master Services & SOWs', desc: 'Detects liability caps, indemnification, payment terms, and IP ownership transfers.' },
+          { title: 'Employment Agreements', desc: 'Highlights probation, termination notice, non-compete covenants, and IP assignment.' },
+        ].map(({ title, desc }) => (
+          <div key={title} className="card" style={{ padding: '16px' }}>
+            <p style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-primary)', marginBottom: '6px' }}>{title}</p>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>{desc}</p>
+          </div>
+        ))}
       </div>
     </div>
   );

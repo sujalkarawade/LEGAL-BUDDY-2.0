@@ -1,19 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import {
-  FileText,
-  Users,
-  Calendar,
-  CreditCard,
-  Briefcase,
-  AlertOctagon,
-  Shield,
-  Clock,
-  RotateCw,
-  HelpCircle,
-  CheckCircle,
-  ExternalLink,
-  Scale,
+  FileText, Users, Calendar, CreditCard, Briefcase,
+  AlertOctagon, Shield, Clock, RotateCw, HelpCircle, CheckCircle,
 } from 'lucide-react';
 import ApiService from '../services/api.js';
 import { DocumentRecord, ContractSummary } from '../types/index.js';
@@ -43,9 +32,7 @@ export const DocumentSummaryPage: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, [id]);
+  useEffect(() => { fetchData(); }, [id]);
 
   const handleReanalyze = async () => {
     if (!id) return;
@@ -62,250 +49,154 @@ export const DocumentSummaryPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex h-96 items-center justify-center">
-        <div className="h-8 w-8 animate-spin border-3 border-[#0a0a0a] border-t-transparent"></div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '320px' }}>
+        <div className="spinner" />
       </div>
     );
   }
 
   if (error || !summary) {
     return (
-      <div className="border-[3px] border-[#0a0a0a] bg-white p-8 text-center max-w-lg mx-auto mt-12 shadow-[6px_6px_0_#0a0a0a]">
-        <AlertOctagon className="h-10 w-10 text-[#c0392b] mx-auto mb-3" />
-        <h3 className="text-base font-black uppercase tracking-wider text-[#0a0a0a]">Summary Unavailable</h3>
-        <p className="text-xs font-mono text-[#666666] mt-1">{error || 'Could not find summary for this document.'}</p>
+      <div className="empty-state card" style={{ marginTop: '40px', maxWidth: '480px', margin: '40px auto' }}>
+        <div className="empty-state-icon"><AlertOctagon size={20} /></div>
+        <h3>Summary Unavailable</h3>
+        <p>{error || 'Could not find a summary for this document.'}</p>
       </div>
     );
   }
 
-  const renderValueOrNotFound = (val: string | null | undefined) => {
-    if (!val || val.toLowerCase().includes('not found') || val.toLowerCase().includes('not explicitly specified') || val.trim() === '') {
-      return (
-        <span className="italic text-[#888888] font-mono text-xs">
-          Not found in document
-        </span>
-      );
+  const renderValue = (val: string | null | undefined) => {
+    const isEmpty = !val || val.toLowerCase().includes('not found') ||
+      val.toLowerCase().includes('not explicitly specified') || val.trim() === '';
+    if (isEmpty) {
+      return <span className="field-empty">Not found in document</span>;
     }
-    // Split into paragraphs/bullets for neat display
     const lines = val.split(/\n+/).map(l => l.trim()).filter(Boolean);
-    if (lines.length > 1) {
-      return (
-        <div className="space-y-1.5">
-          {lines.map((line, i) => (
-            <p key={i} className={`text-[#0a0a0a] text-xs leading-relaxed ${
-              line.match(/^[-•·*]/) ? 'pl-2 border-l-2 border-gray-300 font-medium' : 'font-medium'
-            }`}>
-              {line.replace(/^[-•·*]\s*/, '')}
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return <p className="text-[#0a0a0a] text-xs leading-relaxed font-medium">{val}</p>;
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        {lines.map((line, i) => (
+          <p key={i} style={{ color: 'var(--text-primary)', fontSize: '0.875rem', lineHeight: 1.6 }}>
+            {line.replace(/^[-•·*]\s*/, '')}
+          </p>
+        ))}
+      </div>
+    );
   };
 
+  const sections = [
+    { icon: Users,       label: 'Contracting Parties',          value: summary.parties },
+    { icon: Briefcase,   label: 'Purpose & Scope',              value: summary.purpose },
+    { icon: CreditCard,  label: 'Consideration & Payment',      value: summary.paymentTerms },
+    { icon: CheckCircle, label: 'Primary Responsibilities',     value: summary.responsibilities },
+    { icon: AlertOctagon,label: 'Termination & Notice',         value: summary.terminationConditions },
+    { icon: Shield,      label: 'Confidentiality',              value: summary.confidentialityTerms },
+    { icon: Shield,      label: 'Liability Terms',              value: summary.liabilityTerms },
+    { icon: Clock,       label: 'Renewal Provisions',           value: summary.renewalProvisions },
+    { icon: Calendar,    label: 'Key Deadlines',                value: summary.importantDeadlines },
+  ];
+
   return (
-    <div className="max-w-6xl mx-auto space-y-6 animate-fadeUp">
+    <div style={{ maxWidth: '960px', margin: '0 auto' }} className="animate-fade-in">
       <DocumentNavHeader document={document} />
 
-      {/* Top Overview & Re-analyze Toolbar */}
-      <div className="border-[3px] border-[#0a0a0a] bg-white p-6 shadow-[6px_6px_0_#0a0a0a]">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b-2 border-[#0a0a0a]">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center border-2 border-[#0a0a0a] bg-white text-[#0a0a0a]">
-              <Scale className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-black uppercase tracking-wide text-[#0a0a0a]">Executive Contract Summary</h2>
-              <p className="text-[11px] text-gray-600 font-medium uppercase tracking-wider">
-                Ground-truth extraction of key covenants, consideration, and obligations
-              </p>
-            </div>
+      {/* Overview card */}
+      <div className="card" style={{ marginBottom: '16px' }}>
+        <div className="card-header">
+          <div>
+            <h2>Executive Summary</h2>
+            {summary.analysisProvider && (
+              <span className="badge badge-default" style={{ marginTop: '4px' }}>
+                {summary.analysisProvider.includes('groq') || summary.analysisProvider.includes('openrouter')
+                  ? 'AI Generated' : 'Rule Engine'}
+              </span>
+            )}
           </div>
-
           <button
             onClick={handleReanalyze}
             disabled={isReanalyzing}
-            className="btn btn-sm btn-primary"
+            className="btn btn-sm"
           >
-            <RotateCw className={`h-3.5 w-3.5 ${isReanalyzing ? 'animate-spin' : ''}`} />
-            <span>{isReanalyzing ? 'Re-analyzing...' : 'Refresh Summary'}</span>
+            <RotateCw size={13} style={{ animation: isReanalyzing ? 'spin 0.7s linear infinite' : 'none' }} />
+            {isReanalyzing ? 'Re-analyzing…' : 'Refresh Summary'}
           </button>
         </div>
 
-        {/* High-level Narrative Overview */}
-        {summary.rawSummary && (
-          <div className="mt-5 border-2 border-[#0a0a0a] bg-[#f9f9f9] p-4 shadow-[2px_2px_0_#0a0a0a]">
-            <div className="flex items-center justify-between mb-2">
-              <p className="font-black uppercase tracking-wider text-xs text-[#0a0a0a] font-mono">Overview Synthesis:</p>
-              {summary.analysisProvider && (
-                <span className="border border-[#0a0a0a] bg-[#0a0a0a] px-2 py-0.5 text-[9px] font-black uppercase text-white font-mono">
-                  {summary.analysisProvider.includes('groq') || summary.analysisProvider.includes('openrouter') ? '⚡ AI Generated' : '⚙ Rule Engine'}
-                </span>
-              )}
+        {/* Quick facts strip */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+          {[
+            { icon: FileText,   label: 'Contract Type',  value: summary.contractType },
+            { icon: Calendar,   label: 'Effective Date', value: summary.effectiveDate || 'Not found' },
+            { icon: Clock,      label: 'Term / Expiry',  value: summary.endDate || 'Notice-based' },
+            { icon: CreditCard, label: 'Payment',        value: summary.paymentTerms && !summary.paymentTerms.includes('Not found') ? summary.paymentTerms.slice(0, 40) + '…' : 'Not specified' },
+          ].map(({ icon: Icon, label, value }) => (
+            <div
+              key={label}
+              style={{
+                padding: '14px',
+                background: 'var(--surface)',
+                borderRadius: 'var(--radius)',
+                border: '1px solid var(--border)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                <Icon size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                <p style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</p>
+              </div>
+              <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.4 }}>{value}</p>
             </div>
-            <div className="space-y-2">
+          ))}
+        </div>
+
+        {/* Narrative overview */}
+        {summary.rawSummary && (
+          <div
+            style={{
+              padding: '16px',
+              background: 'var(--surface)',
+              borderRadius: 'var(--radius)',
+              borderLeft: '3px solid var(--black)',
+            }}
+          >
+            <p style={{ fontSize: '0.6875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '8px' }}>
+              Overview
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {summary.rawSummary.split(/\n+/).filter(Boolean).map((para, i) => (
-                <p key={i} className="text-xs text-[#0a0a0a] font-medium leading-relaxed">{para}</p>
+                <p key={i} style={{ fontSize: '0.875rem', color: 'var(--text-primary)', lineHeight: 1.7 }}>{para}</p>
               ))}
             </div>
           </div>
         )}
+      </div>
 
-        {/* Quick Facts Strip */}
-        <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="border-2 border-[#0a0a0a] bg-white p-4 shadow-[3px_3px_0_#0a0a0a] hover:-translate-y-1 transition-all">
-            <div className="flex items-center gap-2 text-[#0a0a0a] mb-1">
-              <FileText className="h-4 w-4" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 font-mono">Contract Type</span>
+      {/* Detailed sections */}
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+          <h2 style={{ fontSize: '0.9375rem' }}>Clause Details</h2>
+        </div>
+        <div style={{ padding: '4px 20px 8px' }}>
+          {sections.map(({ icon: Icon, label, value }) => (
+            <div key={label} className="field-row">
+              <div className="field-label" style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                <Icon size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                {label}
+              </div>
+              <div className="field-value">{renderValue(value)}</div>
             </div>
-            <p className="text-xs font-black uppercase text-[#0a0a0a]">{summary.contractType}</p>
-          </div>
-
-          <div className="border-2 border-[#0a0a0a] bg-white p-4 shadow-[3px_3px_0_#0a0a0a] hover:-translate-y-1 transition-all">
-            <div className="flex items-center gap-2 text-[#0a0a0a] mb-1">
-              <Calendar className="h-4 w-4" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 font-mono">Effective Date</span>
-            </div>
-            <p className="text-xs font-bold font-mono text-[#0a0a0a]">
-              {summary.effectiveDate || 'Not found'}
-            </p>
-          </div>
-
-          <div className="border-2 border-[#0a0a0a] bg-white p-4 shadow-[3px_3px_0_#0a0a0a] hover:-translate-y-1 transition-all">
-            <div className="flex items-center gap-2 text-[#0a0a0a] mb-1">
-              <Clock className="h-4 w-4" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 font-mono">Term / Expiration</span>
-            </div>
-            <p className="text-xs font-bold font-mono text-[#0a0a0a]">
-              {summary.endDate || 'Notice / Term-based'}
-            </p>
-          </div>
-
-          <div className="border-2 border-[#0a0a0a] bg-white p-4 shadow-[3px_3px_0_#0a0a0a] hover:-translate-y-1 transition-all">
-            <div className="flex items-center gap-2 text-[#0a0a0a] mb-1">
-              <CreditCard className="h-4 w-4" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 font-mono">Payment Terms</span>
-            </div>
-            <p className="text-xs font-bold text-[#0a0a0a] truncate">
-              {summary.paymentTerms && !summary.paymentTerms.includes('Not found')
-                ? summary.paymentTerms.slice(0, 35) + '...'
-                : 'Not specified'}
-            </p>
-          </div>
+          ))}
         </div>
       </div>
 
-      {/* Structured Core Sections Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {/* Identified Contracting Parties */}
-        <div className="border-2 border-[#0a0a0a] bg-white p-5 shadow-[4px_4px_0_#0a0a0a] hover:-translate-y-0.5 hover:shadow-[6px_6px_0_#0a0a0a] transition-all">
-          <div className="flex items-center gap-2 pb-3 border-b-2 border-[#0a0a0a] mb-3">
-            <Users className="h-4 w-4 text-[#0a0a0a]" />
-            <h3 className="text-xs font-black uppercase tracking-wider text-[#0a0a0a]">
-              Contracting Parties
-            </h3>
-          </div>
-          {renderValueOrNotFound(summary.parties)}
-        </div>
-
-        {/* Business Purpose / Scope */}
-        <div className="border-2 border-[#0a0a0a] bg-white p-5 shadow-[4px_4px_0_#0a0a0a] hover:-translate-y-0.5 hover:shadow-[6px_6px_0_#0a0a0a] transition-all">
-          <div className="flex items-center gap-2 pb-3 border-b-2 border-[#0a0a0a] mb-3">
-            <Briefcase className="h-4 w-4 text-[#0a0a0a]" />
-            <h3 className="text-xs font-black uppercase tracking-wider text-[#0a0a0a]">
-              Operative Purpose & Recitals
-            </h3>
-          </div>
-          {renderValueOrNotFound(summary.purpose)}
-        </div>
-
-        {/* Payment & Financial Terms */}
-        <div className="border-2 border-[#0a0a0a] bg-white p-5 shadow-[4px_4px_0_#0a0a0a] hover:-translate-y-0.5 hover:shadow-[6px_6px_0_#0a0a0a] transition-all">
-          <div className="flex items-center gap-2 pb-3 border-b-2 border-[#0a0a0a] mb-3">
-            <CreditCard className="h-4 w-4 text-[#0a0a0a]" />
-            <h3 className="text-xs font-black uppercase tracking-wider text-[#0a0a0a]">
-              Consideration & Payment Terms
-            </h3>
-          </div>
-          {renderValueOrNotFound(summary.paymentTerms)}
-        </div>
-
-        {/* Main Responsibilities */}
-        <div className="border-2 border-[#0a0a0a] bg-white p-5 shadow-[4px_4px_0_#0a0a0a] hover:-translate-y-0.5 hover:shadow-[6px_6px_0_#0a0a0a] transition-all">
-          <div className="flex items-center gap-2 pb-3 border-b-2 border-[#0a0a0a] mb-3">
-            <CheckCircle className="h-4 w-4 text-[#0a0a0a]" />
-            <h3 className="text-xs font-black uppercase tracking-wider text-[#0a0a0a]">
-              Primary Responsibilities
-            </h3>
-          </div>
-          {renderValueOrNotFound(summary.responsibilities)}
-        </div>
-
-        {/* Termination & Breach */}
-        <div className="border-2 border-[#0a0a0a] bg-white p-5 shadow-[4px_4px_0_#0a0a0a] hover:-translate-y-0.5 hover:shadow-[6px_6px_0_#0a0a0a] transition-all">
-          <div className="flex items-center gap-2 pb-3 border-b-2 border-[#0a0a0a] mb-3">
-            <AlertOctagon className="h-4 w-4 text-[#c0392b]" />
-            <h3 className="text-xs font-black uppercase tracking-wider text-[#0a0a0a]">
-              Termination Conditions & Notice
-            </h3>
-          </div>
-          {renderValueOrNotFound(summary.terminationConditions)}
-        </div>
-
-        {/* Confidentiality & Liability */}
-        <div className="border-2 border-[#0a0a0a] bg-white p-5 shadow-[4px_4px_0_#0a0a0a] hover:-translate-y-0.5 hover:shadow-[6px_6px_0_#0a0a0a] transition-all">
-          <div className="flex items-center gap-2 pb-3 border-b-2 border-[#0a0a0a] mb-3">
-            <Shield className="h-4 w-4 text-[#0a0a0a]" />
-            <h3 className="text-xs font-black uppercase tracking-wider text-[#0a0a0a]">
-              Confidentiality & Liability Terms
-            </h3>
-          </div>
-          <div className="space-y-3">
-            <div>
-              <p className="text-[10px] font-black text-gray-500 uppercase font-mono">Confidentiality:</p>
-              {renderValueOrNotFound(summary.confidentialityTerms)}
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-gray-500 uppercase font-mono">Liability Cap:</p>
-              {renderValueOrNotFound(summary.liabilityTerms)}
-            </div>
+      {/* Missing terms */}
+      {summary.missingInfo && (
+        <div className="alert alert-warning" style={{ marginTop: '16px' }}>
+          <HelpCircle size={15} style={{ flexShrink: 0, marginTop: '1px' }} />
+          <div>
+            <p style={{ fontWeight: 600, marginBottom: '3px', color: 'var(--warning)' }}>Missing or Unclear Terms</p>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-primary)', lineHeight: 1.6 }}>{summary.missingInfo}</p>
           </div>
         </div>
-
-        {/* Renewal & Deadlines */}
-        <div className="border-2 border-[#0a0a0a] bg-white p-5 shadow-[4px_4px_0_#0a0a0a] hover:-translate-y-0.5 hover:shadow-[6px_6px_0_#0a0a0a] transition-all">
-          <div className="flex items-center gap-2 pb-3 border-b-2 border-[#0a0a0a] mb-3">
-            <Clock className="h-4 w-4 text-[#0a0a0a]" />
-            <h3 className="text-xs font-black uppercase tracking-wider text-[#0a0a0a]">
-              Renewal & Critical Deadlines
-            </h3>
-          </div>
-          <div className="space-y-3">
-            <div>
-              <p className="text-[10px] font-black text-gray-500 uppercase font-mono">Renewal Provisions:</p>
-              {renderValueOrNotFound(summary.renewalProvisions)}
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-gray-500 uppercase font-mono">Deadlines:</p>
-              {renderValueOrNotFound(summary.importantDeadlines)}
-            </div>
-          </div>
-        </div>
-
-        {/* Missing or Unclear Information Banner */}
-        <div className="border-2 border-[#b7950b] bg-[#fefdf0] p-5 shadow-[4px_4px_0_#b7950b] hover:-translate-y-0.5 transition-all">
-          <div className="flex items-center gap-2 pb-3 border-b-2 border-[#b7950b] mb-3">
-            <HelpCircle className="h-4 w-4 text-[#b7950b]" />
-            <h3 className="text-xs font-black uppercase tracking-wider text-[#b7950b]">
-              Missing or Unclear Terms
-            </h3>
-          </div>
-          <p className="text-xs text-[#0a0a0a] leading-relaxed font-medium">
-            {summary.missingInfo || 'No structural deficiencies detected.'}
-          </p>
-        </div>
-      </div>
+      )}
     </div>
   );
 };

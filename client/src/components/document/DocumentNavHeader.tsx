@@ -9,8 +9,6 @@ import {
   CalendarClock,
   Download,
   ArrowLeft,
-  Shield,
-  Layers,
   ScanText,
 } from 'lucide-react';
 import { DocumentRecord } from '../../types/index.js';
@@ -25,92 +23,123 @@ export const DocumentNavHeader: React.FC<DocumentNavHeaderProps> = ({ document }
   if (!document) return null;
 
   const tabs = [
-    { name: 'Summary', path: `/documents/${id}/summary`, icon: FileText },
-    { name: 'OCR & Text Preview', path: `/documents/${id}/ocr-preview`, icon: ScanText },
-    { name: 'Clause Analysis', path: `/documents/${id}/clauses`, icon: SearchCode },
-    { name: 'Ask Legal Buddy', path: `/documents/${id}/chat`, icon: MessageSquareQuote },
-    { name: 'Completeness Check', path: `/documents/${id}/completeness`, icon: CheckCircle2 },
-    { name: 'Dates & Obligations', path: `/documents/${id}/obligations`, icon: CalendarClock },
+    { name: 'Summary',             path: `/documents/${id}/summary`,      icon: FileText },
+    { name: 'OCR Preview',         path: `/documents/${id}/ocr-preview`,  icon: ScanText },
+    { name: 'Clause Analysis',     path: `/documents/${id}/clauses`,      icon: SearchCode },
+    { name: 'Ask Legal Buddy',     path: `/documents/${id}/chat`,         icon: MessageSquareQuote },
+    { name: 'Completeness',        path: `/documents/${id}/completeness`, icon: CheckCircle2 },
+    { name: 'Obligations',         path: `/documents/${id}/obligations`,  icon: CalendarClock },
   ];
 
+  const ocrLabel =
+    document.ocrStatus === 'PENDING_REVIEW' ? { text: 'OCR Review Pending', cls: 'badge-warning' } :
+    document.ocrStatus === 'OCR_COMPLETED'  ? { text: 'OCR Processed',       cls: 'badge-success' } :
+    document.ocrStatus === 'VERIFIED'       ? { text: 'Text Verified',        cls: 'badge-info'    } :
+    null;
+
   return (
-    <div className="space-y-4 mb-6 animate-fadeUp">
-      {/* Breadcrumb & Contract Banner */}
-      <div className="border-2 border-[#0a0a0a] bg-white p-4 shadow-[4px_4px_0_#0a0a0a] flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+    <div style={{ marginBottom: '24px' }}>
+      {/* Document banner */}
+      <div
+        style={{
+          background: 'var(--white)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius)',
+          padding: '14px 18px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+          flexWrap: 'wrap',
+          marginBottom: '1px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
           <Link
             to="/documents"
-            className="flex h-9 w-9 items-center justify-center border-2 border-[#0a0a0a] bg-white text-[#0a0a0a] hover:bg-[#0a0a0a] hover:text-white transition-colors"
-            title="Back to Contract Repository"
+            style={{
+              width: '32px',
+              height: '32px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--border)',
+              color: 'var(--text-secondary)',
+              background: 'var(--white)',
+              textDecoration: 'none',
+              flexShrink: 0,
+              transition: 'background var(--transition)',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'var(--white)')}
+            title="Back to Documents"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft size={15} />
           </Link>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-base font-black text-[#0a0a0a] tracking-tight sm:text-lg uppercase">
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <h1
+                style={{
+                  fontSize: '0.9375rem',
+                  fontWeight: 700,
+                  color: 'var(--text-primary)',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  maxWidth: '420px',
+                }}
+              >
                 {document.originalName}
               </h1>
-              <span className="border-2 border-[#0a0a0a] bg-[#0a0a0a] px-2 py-0.5 text-[10px] font-black uppercase text-white font-mono">
-                {document.summary?.contractType || 'Contract'}
-              </span>
-              {document.ocrStatus === 'PENDING_REVIEW' && (
-                <span className="border-2 border-[#b7950b] bg-[#fefdf0] text-[#b7950b] px-2 py-0.5 text-[10px] font-black uppercase font-mono animate-pulse">
-                  âš ï¸ OCR Review Pending
-                </span>
+              {document.summary?.contractType && (
+                <span className="badge badge-default">{document.summary.contractType}</span>
               )}
-              {document.ocrStatus === 'OCR_COMPLETED' && (
-                <span className="border-2 border-[#27ae60] bg-[#eafaf1] text-[#27ae60] px-2 py-0.5 text-[10px] font-black uppercase font-mono">
-                  PaddleOCR Processed
-                </span>
-              )}
-              {document.ocrStatus === 'VERIFIED' && (
-                <span className="border-2 border-[#2980b9] bg-[#ebf5fb] text-[#2980b9] px-2 py-0.5 text-[10px] font-black uppercase font-mono">
-                  Text Verified
-                </span>
+              {ocrLabel && (
+                <span className={`badge ${ocrLabel.cls}`}>{ocrLabel.text}</span>
               )}
             </div>
-            <p className="text-[11px] font-mono text-gray-600 mt-1 uppercase font-semibold">
-              {document.pageCount} {document.pageCount === 1 ? 'PAGE' : 'PAGES'} â€¢ UPLOADED{' '}
-              {new Date(document.createdAt).toLocaleDateString()} â€¢ ENGINE:{' '}
-              <span className="text-[#0a0a0a] font-black">
-                Local Rule Engine
-              </span>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '3px' }}>
+              {document.pageCount} {document.pageCount === 1 ? 'page' : 'pages'} &bull; Uploaded {new Date(document.createdAt).toLocaleDateString()}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => id && ApiService.openDocumentPage(id, 1).catch(err => alert(err.message))}
-            className="btn btn-sm btn-primary"
-          >
-            <Download className="h-3.5 w-3.5" />
-            <span>Open PDF</span>
-          </button>
-        </div>
+        <button
+          onClick={() => id && ApiService.openDocumentPage(id, 1).catch(err => alert(err.message))}
+          className="btn btn-sm"
+          style={{ flexShrink: 0 }}
+        >
+          <Download size={13} />
+          Open PDF
+        </button>
       </div>
 
-      {/* Module Tabs Navigation */}
-      <div className="flex items-center gap-1 border-b-[3px] border-[#0a0a0a] bg-white px-2 overflow-x-auto">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          return (
-            <NavLink
-              key={tab.path}
-              to={tab.path}
-              className={({ isActive }) =>
-                `flex items-center gap-2 px-4 py-3 text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all border-b-[3px] -mb-[3px] ${
-                  isActive
-                    ? 'border-[#0a0a0a] text-[#0a0a0a] bg-[#f0f0f0]'
-                    : 'border-transparent text-gray-500 hover:text-[#0a0a0a] hover:bg-[#f9f9f9]'
-                }`
-              }
-            >
-              <Icon className="h-4 w-4" />
-              <span>{tab.name}</span>
-            </NavLink>
-          );
-        })}
+      {/* Module Tabs */}
+      <div
+        style={{
+          background: 'var(--white)',
+          borderLeft: '1px solid var(--border)',
+          borderRight: '1px solid var(--border)',
+          borderBottom: '1px solid var(--border)',
+          borderRadius: '0 0 var(--radius) var(--radius)',
+        }}
+      >
+        <div className="tab-nav">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <NavLink
+                key={tab.path}
+                to={tab.path}
+                className={({ isActive }) => `tab-item${isActive ? ' active' : ''}`}
+              >
+                <Icon size={14} />
+                <span>{tab.name}</span>
+              </NavLink>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

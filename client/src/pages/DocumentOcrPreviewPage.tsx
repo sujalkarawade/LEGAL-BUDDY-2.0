@@ -10,12 +10,9 @@ import {
   Copy,
   Check,
   ShieldCheck,
-  Languages,
-  Eye,
-  Edit3,
-  Layers,
   ArrowRight,
   Info,
+  Layers,
 } from 'lucide-react';
 import ApiService from '../services/api.js';
 import { DocumentRecord, DocumentOcrResult, PageOcrMetadata } from '../types/index.js';
@@ -48,10 +45,11 @@ export const DocumentOcrPreviewPage: React.FC = () => {
       ]);
       setDocument(docRes.document);
       setOcrData(ocrRes.ocrMetadata);
-      const pageIndex = ocrRes.ocrMetadata?.pages.findIndex(p => p.pageNumber === Number(searchParams.get('page')));
+      const pageIndex = ocrRes.ocrMetadata?.pages.findIndex(
+        (p) => p.pageNumber === Number(searchParams.get('page'))
+      );
       if (pageIndex !== undefined && pageIndex >= 0) setSelectedPageIndex(pageIndex);
 
-      // Initialize edited pages map
       const initialMap: Record<number, string> = {};
       if (ocrRes.ocrMetadata?.pages) {
         ocrRes.ocrMetadata.pages.forEach((p) => {
@@ -99,9 +97,9 @@ export const DocumentOcrPreviewPage: React.FC = () => {
     for (let attempt = 0; attempt < 1800; attempt++) {
       const job = await ApiService.getJobStatus(jobId);
       setSuccessMessage(job.progress?.currentStage || 'Processing document...');
-      if (job.status === 'FAILED') throw new Error(job.error || 'Processing failed. Review pages and retry.');
+      if (job.status === 'FAILED') throw new Error(job.error || 'Processing failed.');
       if (job.status === 'COMPLETED') return job;
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
     throw new Error('Processing continues in the background. Return later to check the document.');
   };
@@ -123,10 +121,9 @@ export const DocumentOcrPreviewPage: React.FC = () => {
       setSuccessMessage('Text verified and analysis completed.');
       await fetchOcrData();
 
-      // Briefly show success before navigating to summary
       setTimeout(() => {
         navigate(`/documents/${id}/summary`);
-      }, 1200);
+      }, 1000);
     } catch (err: any) {
       setError(err.message || 'Failed to verify text and trigger analysis.');
       setIsSaving(false);
@@ -135,17 +132,20 @@ export const DocumentOcrPreviewPage: React.FC = () => {
 
   const handleReOcr = async (onlyCurrentPage = false) => {
     if (!id) return;
-    if (!confirm('Re-run local PaddleOCR on this contract? Existing extractions will be refreshed.')) {
+    if (!confirm('Re-run local OCR on this contract? Existing text extractions will be refreshed.')) {
       return;
     }
 
     setIsReScanning(true);
     setError(null);
     try {
-      const result = await ApiService.reOcrDocument(id, onlyCurrentPage && ocrData ? [ocrData.pages[selectedPageIndex].pageNumber] : undefined);
+      const result = await ApiService.reOcrDocument(
+        id,
+        onlyCurrentPage && ocrData ? [ocrData.pages[selectedPageIndex].pageNumber] : undefined
+      );
       await waitForJob(result.jobId);
       await fetchOcrData();
-      setSuccessMessage('PaddleOCR re-scan completed successfully.');
+      setSuccessMessage('OCR re-scan completed successfully.');
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err: any) {
       setError(err.message || 'Failed to re-run OCR.');
@@ -156,8 +156,8 @@ export const DocumentOcrPreviewPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex h-96 items-center justify-center">
-        <div className="h-8 w-8 animate-spin border-3 border-[#0a0a0a] border-t-transparent"></div>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '320px' }}>
+        <div className="spinner" />
       </div>
     );
   }
@@ -167,318 +167,275 @@ export const DocumentOcrPreviewPage: React.FC = () => {
   const isCurrentModified = currentPage && currentText !== currentPage.text;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 animate-fadeUp">
+    <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
       <DocumentNavHeader document={document} />
-      <div className="flex items-center gap-3 text-sm">
-        <span>Document processing: {document?.ragStatus || 'Not indexed'}</span>
-        <button className="btn btn-sm" disabled={isReScanning || isSaving || !ocrData?.pages.length}
-          onClick={() => handleReOcr(true)}>Retry selected page</button>
-      </div>
 
-      {/* OCR Intelligence Overview Banner */}
-      <div className="border-[3px] border-[#0a0a0a] bg-white p-6 shadow-[6px_6px_0_#0a0a0a]">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b-2 border-[#0a0a0a]">
+      {/* OCR Overview & Metrics */}
+      <div className="card" style={{ marginBottom: '20px' }}>
+        <div className="card-header" style={{ marginBottom: '16px', paddingBottom: '14px', flexWrap: 'wrap', gap: '12px' }}>
           <div>
-            <div className="flex items-center gap-2">
-              <ScanText className="h-5 w-5 text-[#0a0a0a]" />
-              <h2 className="text-base font-black uppercase tracking-wider text-[#0a0a0a]">
-                OCR Extraction & Document Text Verification
-              </h2>
-            </div>
-            <p className="text-xs text-gray-600 font-mono mt-1">
-              Inspect selectable text streams, PaddleOCR transcription, confidence scores, and Marathi-English page boundaries.
+            <h2 style={{ fontSize: '1.0625rem' }}>OCR Extraction & Text Verification</h2>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              Review extracted page text, verify scanned sections, and run contract analysis
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <button
               onClick={() => handleReOcr()}
               disabled={isReScanning || isSaving}
-              className="btn btn-sm btn-secondary flex items-center gap-1.5"
-              title="Re-run local PaddleOCR"
+              className="btn btn-secondary btn-sm"
             >
-              <RotateCw className={`h-3.5 w-3.5 ${isReScanning ? 'animate-spin' : ''}`} />
-              <span>{isReScanning ? 'Running OCR...' : 'Re-run OCR'}</span>
+              <RotateCw size={13} style={{ animation: isReScanning ? 'spin 1s linear infinite' : 'none' }} />
+              <span>{isReScanning ? 'Running OCR…' : 'Re-run OCR'}</span>
             </button>
 
             <button
               onClick={handleVerifyAndAnalyze}
               disabled={isSaving || isReScanning}
-              className="btn btn-sm btn-primary flex items-center gap-1.5"
+              className="btn btn-primary btn-sm"
             >
-              <Sparkles className="h-3.5 w-3.5 text-[#f1c40f]" />
-              <span>{isSaving ? 'Analyzing Contract...' : 'Confirm & Run Analysis'}</span>
-              <ArrowRight className="h-3.5 w-3.5" />
+              <Sparkles size={13} />
+              <span>{isSaving ? 'Analyzing…' : 'Confirm & Run Analysis'}</span>
+              <ArrowRight size={13} />
             </button>
           </div>
         </div>
 
-        {/* OCR Audit Metrics Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 pt-4 text-xs font-mono">
-          <div className="border-2 border-[#0a0a0a] p-3 bg-[#f9f9f9]">
-            <span className="text-[10px] text-gray-500 font-bold uppercase block">Total Pages</span>
-            <span className="text-base font-black text-[#0a0a0a]">{ocrData?.totalPages || document?.pageCount || 1}</span>
-          </div>
-
-          <div className="border-2 border-[#0a0a0a] p-3 bg-[#f9f9f9]">
-            <span className="text-[10px] text-gray-500 font-bold uppercase block">Scanned / Photo</span>
-            <span className="text-base font-black text-[#c0392b]">{ocrData?.scannedPagesCount || 0}</span>
-          </div>
-
-          <div className="border-2 border-[#0a0a0a] p-3 bg-[#f9f9f9]">
-            <span className="text-[10px] text-gray-500 font-bold uppercase block">Selectable Pages</span>
-            <span className="text-base font-black text-[#27ae60]">{ocrData?.selectablePagesCount || 0}</span>
-          </div>
-
-          <div className="border-2 border-[#0a0a0a] p-3 bg-[#f9f9f9]">
-            <span className="text-[10px] text-gray-500 font-bold uppercase block">Average Confidence</span>
-            <span className={`text-base font-black ${
-              (ocrData?.overallConfidence || 1) < 0.70 ? 'text-[#c0392b]' : 'text-[#27ae60]'
-            }`}>
-              {Math.round((ocrData?.overallConfidence || 1) * 100)}%
-            </span>
-          </div>
-
-          <div className="border-2 border-[#0a0a0a] p-3 bg-[#f9f9f9]">
-            <span className="text-[10px] text-gray-500 font-bold uppercase block">Detected Languages</span>
-            <div className="flex items-center gap-1 mt-0.5">
-              {ocrData?.detectedLanguages?.includes('mr') && (
-                <span className="bg-[#0a0a0a] text-white px-1.5 py-0.5 text-[10px] font-bold">मराठी</span>
-              )}
-              {ocrData?.detectedLanguages?.includes('en') && (
-                <span className="bg-[#0a0a0a] text-white px-1.5 py-0.5 text-[10px] font-bold">EN</span>
-              )}
-              {(!ocrData?.detectedLanguages || ocrData.detectedLanguages.length === 0) && (
-                <span className="text-gray-500 text-xs">EN</span>
-              )}
+        {/* Metrics Grid */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+            gap: '12px',
+          }}
+        >
+          {[
+            { label: 'Total Pages', value: ocrData?.totalPages || document?.pageCount || 1 },
+            { label: 'Scanned Pages', value: ocrData?.scannedPagesCount || 0 },
+            { label: 'Selectable Pages', value: ocrData?.selectablePagesCount || 0 },
+            {
+              label: 'Avg Confidence',
+              value: `${Math.round((ocrData?.overallConfidence || 1) * 100)}%`,
+              highlight: (ocrData?.overallConfidence || 1) < 0.7 ? 'var(--warning)' : undefined,
+            },
+            {
+              label: 'Languages',
+              value: ocrData?.detectedLanguages?.join(', ').toUpperCase() || 'EN',
+            },
+            {
+              label: 'OCR Engine',
+              value: ocrData?.ocrEngineUsed === 'paddle_ocr' ? 'PaddleOCR' : 'Text Stream',
+            },
+          ].map((stat, i) => (
+            <div
+              key={i}
+              style={{
+                padding: '10px 14px',
+                background: 'var(--surface)',
+                borderRadius: 'var(--radius)',
+                border: '1px solid var(--border)',
+              }}
+            >
+              <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                {stat.label}
+              </span>
+              <p
+                style={{
+                  fontSize: '1rem',
+                  fontWeight: 700,
+                  color: stat.highlight || 'var(--text-primary)',
+                  marginTop: '2px',
+                }}
+              >
+                {stat.value}
+              </p>
             </div>
-          </div>
-
-          <div className="border-2 border-[#0a0a0a] p-3 bg-[#f9f9f9]">
-            <span className="text-[10px] text-gray-500 font-bold uppercase block">Engine Active</span>
-            <span className="text-[11px] font-black text-[#0a0a0a] truncate block" title={ocrData?.ocrEngineUsed}>
-              {ocrData?.ocrEngineUsed === 'paddle_ocr'
-                ? 'PADDLEOCR (LOCAL)'
-                : ocrData?.ocrEngineUsed === 'selectable_direct'
-                ? 'DIGITAL TEXT STREAM'
-                : 'OFFLINE / FALLBACK'}
-            </span>
-          </div>
+          ))}
         </div>
 
-        {/* Flagged Alert Banner if Low Confidence or Skew */}
+        {/* Alerts */}
         {ocrData?.hasLowConfidencePages && (
-          <div className="mt-4 border-2 border-[#b7950b] bg-[#fefdf0] p-3.5 flex items-start gap-3 text-xs">
-            <AlertTriangle className="h-5 w-5 text-[#b7950b] shrink-0 mt-0.5" />
+          <div className="alert alert-warning" style={{ marginTop: '14px' }}>
+            <AlertTriangle size={16} style={{ flexShrink: 0 }} />
             <div>
-              <p className="font-black uppercase tracking-wider text-[#b7950b]">
-                Low Confidence / Photographed Page Quality Alert
-              </p>
-              <p className="text-gray-700 mt-0.5 font-sans">
-                Certain scanned pages have OCR confidence scores below 70% or skewed camera angles. Legal Buddy will
-                never invent or guess unreadable terms. Please verify the extracted text below and correct any critical
-                party names, dates, or amounts before launching full AI legal analysis.
+              <p style={{ fontWeight: 600 }}>Low Confidence Extraction Alert</p>
+              <p style={{ fontSize: '0.8125rem', marginTop: '2px' }}>
+                Certain pages were extracted with lower confidence. Review and correct any critical dates, names, or amounts before launching analysis.
               </p>
             </div>
           </div>
         )}
 
-        {/* Local PaddleOCR notice if scanned pages could not be transcribed */}
-        {ocrData?.pages?.some((p) => p.extractionType === 'failed' && p.isScanned)
-          ? (
-          <div className="mt-4 border-2 border-[#c0392b] bg-[#fdf0ef] p-3.5 flex items-start gap-3 text-xs">
-            <Info className="h-5 w-5 text-[#c0392b] shrink-0 mt-0.5" />
-            <div>
-              <p className="font-black uppercase tracking-wider text-[#c0392b]">
-                Local PaddleOCR Could Not Transcribe Some Pages
-              </p>
-              <p className="text-gray-700 mt-0.5 font-sans">
-                This document contains photographed or scanned pages that local PaddleOCR (English &amp; Marathi)
-                could not read. Legal Buddy runs OCR entirely offline — ensure Python and the packages in{' '}
-                <code className="font-mono bg-white px-1 border border-gray-300">server/ocr/requirements.txt</code> are
-                installed (see <code className="font-mono bg-white px-1 border border-gray-300">server/ocr/README.md</code>),
-                then try <span className="font-semibold">Re-run PaddleOCR</span>. You can also type the missing text
-                directly into the page editor below.
-              </p>
-            </div>
-          </div>
-        ) : null}
-
-        {/* Success or Error banners */}
         {successMessage && (
-          <div className="mt-4 border-2 border-[#27ae60] bg-[#eafaf1] p-3 flex items-center gap-2 text-xs text-[#27ae60] font-black uppercase tracking-wider">
-            <CheckCircle2 className="h-4 w-4" />
+          <div className="alert alert-success" style={{ marginTop: '14px' }}>
+            <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
             <span>{successMessage}</span>
           </div>
         )}
 
         {error && (
-          <div className="mt-4 border-2 border-[#c0392b] bg-[#fdf0ef] p-3 flex items-center gap-2 text-xs text-[#c0392b] font-black uppercase tracking-wider">
-            <AlertTriangle className="h-4 w-4" />
+          <div className="alert alert-danger" style={{ marginTop: '14px' }}>
+            <AlertTriangle size={16} style={{ flexShrink: 0 }} />
             <span>{error}</span>
           </div>
         )}
       </div>
 
-      {/* Main OCR Split Pane: Page List + Live Editor */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Page Sidebar */}
-        <div className="lg:col-span-4 border-[3px] border-[#0a0a0a] bg-white p-4 shadow-[6px_6px_0_#0a0a0a] space-y-3">
-          <div className="flex items-center justify-between pb-2 border-b-2 border-[#0a0a0a]">
-            <h3 className="text-xs font-black uppercase tracking-wider text-[#0a0a0a] flex items-center gap-1.5">
-              <Layers className="h-4 w-4" />
-              <span>Document Pages ({ocrData?.pages?.length || 0})</span>
-            </h3>
-            <span className="text-[10px] font-mono text-gray-500 font-bold">Select page to review</span>
+      {/* Main Split Pane */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1fr) minmax(0, 2.5fr)', gap: '20px' }}>
+        {/* Left: Page Navigator */}
+        <div className="card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', height: '620px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Layers size={14} style={{ color: 'var(--text-muted)' }} />
+              <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>Pages ({ocrData?.pages?.length || 0})</span>
+            </div>
           </div>
 
-          <div className="max-h-[600px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {ocrData?.pages?.map((p, idx) => {
               const isSelected = idx === selectedPageIndex;
               const isModified = (editedPages[p.pageNumber] ?? p.text) !== p.text;
 
               return (
-                <div
+                <button
                   key={p.pageNumber}
                   onClick={() => setSelectedPageIndex(idx)}
-                  className={`border-2 p-3 cursor-pointer transition-all ${
-                    isSelected
-                      ? 'border-[#0a0a0a] bg-[#0a0a0a] text-white shadow-[2px_2px_0_#b7950b]'
-                      : 'border-gray-200 bg-white hover:border-[#0a0a0a] hover:bg-[#f9f9f9] text-[#0a0a0a]'
-                  }`}
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: 'var(--radius)',
+                    border: '1px solid',
+                    borderColor: isSelected ? 'var(--black)' : 'var(--border)',
+                    background: isSelected ? 'var(--black)' : 'var(--white)',
+                    color: isSelected ? 'var(--white)' : 'var(--text-primary)',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    transition: 'all var(--transition)',
+                  }}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs font-mono font-black ${isSelected ? 'text-white' : 'text-[#0a0a0a]'}`}>
-                        PAGE {p.pageNumber}
-                      </span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>
+                      Page {p.pageNumber}
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       {isModified && (
-                        <span className="text-[9px] font-bold px-1 py-0.2 bg-[#f39c12] text-white uppercase">
+                        <span className="badge badge-warning" style={{ fontSize: '0.625rem', padding: '1px 5px' }}>
                           Edited
                         </span>
                       )}
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                      {p.flagged ? (
-                        <span
-                          title={p.flaggedReason || 'Low confidence / skewed'}
-                          className="flex items-center gap-1 text-[10px] font-bold text-[#e74c3c]"
-                        >
-                          <AlertTriangle className="h-3 w-3" />
-                          <span>{Math.round(p.confidence * 100)}%</span>
-                        </span>
-                      ) : (
-                        <span
-                          className={`text-[10px] font-mono font-bold ${
-                            isSelected ? 'text-green-300' : 'text-[#27ae60]'
-                          }`}
-                        >
-                          {Math.round(p.confidence * 100)}%
-                        </span>
-                      )}
+                      <span
+                        style={{
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          color: isSelected ? 'var(--white)' : p.confidence < 0.7 ? 'var(--danger)' : 'var(--success)',
+                        }}
+                      >
+                        {Math.round(p.confidence * 100)}%
+                      </span>
                     </div>
                   </div>
-
-                  <div className="mt-1.5 flex items-center justify-between text-[10px] font-mono opacity-80">
-                    <span>
-                      {p.isScanned ? '📷 Scanned' : '📄 Selectable'}
-                      {p.skewAngle && Math.abs(p.skewAngle) > 1 ? ` • ${p.skewAngle}° skew` : ''}
-                    </span>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontSize: '0.6875rem',
+                      color: isSelected ? 'var(--border)' : 'var(--text-muted)',
+                      marginTop: '4px',
+                    }}
+                  >
+                    <span>{p.isScanned ? 'Scanned' : 'Direct'}</span>
                     <span>{p.wordCount} words</span>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
         </div>
 
-        {/* Right Editor & Verification Workspace */}
-        <div className="lg:col-span-8 border-[3px] border-[#0a0a0a] bg-white p-6 shadow-[6px_6px_0_#0a0a0a] flex flex-col justify-between">
-          <div>
-            {/* Page Header Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b-2 border-[#0a0a0a]">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-black uppercase tracking-wider text-[#0a0a0a]">
-                    Page {currentPage?.pageNumber || 1} Extracted Text
-                  </h3>
-                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 border-2 ${
-                    currentPage?.isScanned
-                      ? 'border-[#0a0a0a] bg-[#fefdf0] text-[#0a0a0a]'
-                      : 'border-[#27ae60] bg-[#eafaf1] text-[#27ae60]'
-                  }`}>
-                    {currentPage?.isScanned ? 'PADDLEOCR LAYER' : 'DIGITAL TEXT STREAM'}
-                  </span>
-                  {currentPage?.languages?.includes('mr') && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 border-2 border-[#0a0a0a] bg-[#0a0a0a] text-white">
-                      मराठी (Devanagari)
-                    </span>
-                  )}
-                </div>
-
-                {currentPage?.flaggedReason && (
-                  <p className="text-[11px] font-mono text-[#c0392b] font-bold mt-1">
-                    ⚠️ {currentPage.flaggedReason}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleCopyText}
-                  className="btn btn-sm btn-secondary flex items-center gap-1"
-                  title="Copy extracted text"
-                >
-                  {copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
-                  <span>{copied ? 'Copied' : 'Copy'}</span>
-                </button>
-
-                {isCurrentModified && (
-                  <button
-                    onClick={handleResetCurrentPage}
-                    className="btn btn-sm btn-secondary text-xs"
-                    title="Reset to original OCR extraction"
-                  >
-                    Reset Page
-                  </button>
-                )}
-              </div>
+        {/* Right: Text Canvas & Verification */}
+        <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', height: '620px' }}>
+          {/* Header */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingBottom: '12px',
+              borderBottom: '1px solid var(--border)',
+              marginBottom: '14px',
+              flexWrap: 'wrap',
+              gap: '8px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h3 style={{ fontSize: '0.9375rem', fontWeight: 600 }}>
+                Page {currentPage?.pageNumber || 1}
+              </h3>
+              <span className="badge badge-default">
+                {currentPage?.isScanned ? 'PaddleOCR' : 'Text Stream'}
+              </span>
+              {currentPage?.languages?.includes('mr') && (
+                <span className="badge badge-default">मराठी</span>
+              )}
             </div>
 
-            {/* Editable Monospace Canvas */}
-            <div className="mt-4">
-              <label className="text-[11px] font-black uppercase tracking-wider text-gray-500 font-mono mb-1.5 flex items-center justify-between">
-                <span>Raw Text Content (Editable for Correction)</span>
-                <span>{currentText.length} characters • {currentText.split(/\s+/).filter(Boolean).length} words</span>
-              </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <button onClick={handleCopyText} className="btn btn-secondary btn-sm">
+                {copied ? <Check size={13} style={{ color: 'var(--success)' }} /> : <Copy size={13} />}
+                <span>{copied ? 'Copied' : 'Copy'}</span>
+              </button>
 
-              <textarea
-                value={currentText}
-                onChange={(e) => currentPage && handleTextChange(currentPage.pageNumber, e.target.value)}
-                rows={18}
-                className="w-full border-2 border-[#0a0a0a] bg-[#fbfbfb] p-4 font-mono text-xs text-[#0a0a0a] leading-relaxed resize-y focus:outline-none focus:bg-white focus:shadow-[4px_4px_0_#0a0a0a] transition-all"
-                placeholder="Extracted legal text will appear here..."
-              />
+              {isCurrentModified && (
+                <button onClick={handleResetCurrentPage} className="btn btn-ghost btn-sm">
+                  Reset
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Bottom Verification Footer */}
-          <div className="mt-6 pt-4 border-t-2 border-[#0a0a0a] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-xs text-gray-600 font-mono">
-              <ShieldCheck className="h-4 w-4 text-[#27ae60]" />
-              <span>Exact page boundaries and line citations are preserved for Q&A and clause audit.</span>
-            </div>
+          {/* Text Area */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <textarea
+              value={currentText}
+              onChange={(e) => currentPage && handleTextChange(currentPage.pageNumber, e.target.value)}
+              className="textarea"
+              style={{
+                flex: 1,
+                width: '100%',
+                fontFamily: 'monospace',
+                fontSize: '0.8125rem',
+                lineHeight: 1.6,
+                padding: '14px',
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                resize: 'none',
+              }}
+              placeholder="Extracted legal text will appear here..."
+            />
+          </div>
 
-            <button
-              onClick={handleVerifyAndAnalyze}
-              disabled={isSaving || isReScanning}
-              className="btn btn-primary flex items-center justify-center gap-2"
-            >
-              <Sparkles className="h-4 w-4 text-[#f1c40f]" />
-              <span>{isSaving ? 'Processing Full Legal Analysis...' : 'Confirm & Run Legal Analysis'}</span>
-              <ArrowRight className="h-4 w-4" />
-            </button>
+          {/* Footer Info */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingTop: '12px',
+              borderTop: '1px solid var(--border)',
+              marginTop: '12px',
+              fontSize: '0.75rem',
+              color: 'var(--text-muted)',
+            }}
+          >
+            <span>
+              {currentText.length} characters · {currentText.split(/\s+/).filter(Boolean).length} words
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <ShieldCheck size={14} style={{ color: 'var(--success)' }} />
+              Preserved with verbatim page boundaries
+            </span>
           </div>
         </div>
       </div>

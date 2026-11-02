@@ -1,18 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
-  MessageSquareQuote,
+  MessageSquare,
   Send,
   Trash2,
   Sparkles,
   Shield,
-  FileText,
-  User,
-  Bot,
-  Info,
-  ChevronRight,
   ExternalLink,
   BookOpen,
+  ArrowRight,
+  Info,
+  ChevronRight,
 } from 'lucide-react';
 import ApiService from '../services/api.js';
 import { DocumentRecord, ChatMessage, ChatCitation } from '../types/index.js';
@@ -25,7 +23,7 @@ export const DocumentChatPage: React.FC = () => {
   const [inputQuestion, setInputQuestion] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
-  const [aiProvider, setAiProvider] = useState<string>('groq (openai/gpt-oss-120b)');
+  const [aiProvider, setAiProvider] = useState<string>('groq');
   const [activeCitation, setActiveCitation] = useState<ChatCitation | null>(null);
   const currentDocumentId = useRef(id);
   currentDocumentId.current = id;
@@ -62,7 +60,7 @@ export const DocumentChatPage: React.FC = () => {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, isSending]);
 
   const handleSendMessage = async (questionText?: string) => {
     const q = questionText || inputQuestion;
@@ -71,7 +69,6 @@ export const DocumentChatPage: React.FC = () => {
     setInputQuestion('');
     setIsSending(true);
 
-    // Optimistic user message
     const tempUserMsg: ChatMessage = {
       id: `temp-${Date.now()}`,
       conversationId: '',
@@ -87,7 +84,6 @@ export const DocumentChatPage: React.FC = () => {
       if (res.provider) setAiProvider(res.provider);
       setMessages((prev) => [...prev.filter((m) => m.id !== tempUserMsg.id), tempUserMsg, res.message]);
     } catch (err: any) {
-      // Remove optimistic message and show error inline
       setMessages((prev) => prev.filter((m) => m.id !== tempUserMsg.id));
       alert(`Chat error: ${err.message}`);
     } finally {
@@ -97,7 +93,7 @@ export const DocumentChatPage: React.FC = () => {
 
   const handleClearChat = async () => {
     if (!id) return;
-    if (!confirm('Clear this chat conversation?')) return;
+    if (!confirm('Clear chat conversation for this document?')) return;
 
     try {
       await ApiService.clearChat(id);
@@ -111,53 +107,89 @@ export const DocumentChatPage: React.FC = () => {
   const samplePrompts = [
     'What is the title, purpose, or main subject of this agreement?',
     'What payment terms, consideration amounts, and invoices are specified?',
-    'Who are the contracting parties and their roles or representatives?',
+    'Who are the contracting parties and their roles?',
     'What is the required notice period for termination or renewal?',
-    'Are there limitation of liability caps or indemnity terms in this contract?',
+    'Are there limitation of liability caps or indemnity terms?',
   ];
 
   const parseCitations = (citationsStr?: string | null): ChatCitation[] => {
     if (!citationsStr) return [];
     try {
       const parsed = JSON.parse(citationsStr);
-      return Array.isArray(parsed) ? parsed.filter(c => c.verified === true && c.chunkId && Number.isInteger(c.pageNumber)) : [];
-    } catch (e) {
+      return Array.isArray(parsed)
+        ? parsed.filter((c) => c.verified === true && c.chunkId && Number.isInteger(c.pageNumber))
+        : [];
+    } catch {
       return [];
     }
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 animate-fadeUp">
+    <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
       <DocumentNavHeader document={document} />
-      {!['READY', 'KEYWORD_READY'].includes(document?.ragStatus || '') && <p className="border p-3 text-sm">
-        Document chat requires completed extraction and indexing. <Link className="underline" to={`/documents/${id}/ocr-preview`}>Review pages or retry processing</Link>.
-      </p>}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Chat Interface (2 cols) */}
-        <div className="lg:col-span-2 border-[3px] border-[#0a0a0a] bg-white shadow-[6px_6px_0_#0a0a0a] flex flex-col h-[650px] overflow-hidden">
-          {/* Chat Header */}
-          <div className="flex items-center justify-between p-4 border-b-[3px] border-[#0a0a0a] bg-[#0a0a0a] text-white">
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center border-2 border-white bg-[#0a0a0a] text-white font-mono font-black text-xs">
-                AI
+      {!['READY', 'KEYWORD_READY'].includes(document?.ragStatus || '') && (
+        <div className="alert alert-warning" style={{ marginBottom: '20px' }}>
+          <Info size={16} style={{ flexShrink: 0 }} />
+          <div>
+            <p style={{ fontWeight: 600 }}>Document text indexing is still in progress</p>
+            <p style={{ fontSize: '0.8125rem', marginTop: '2px' }}>
+              Chat works best once indexing completes.{' '}
+              <Link to={`/documents/${id}/ocr-preview`} style={{ textDecoration: 'underline', color: 'inherit' }}>
+                Review OCR pages
+              </Link>
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(280px, 1fr)', gap: '20px' }}>
+        {/* Main Chat Interface */}
+        <div
+          className="card"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            height: '680px',
+            padding: 0,
+            overflow: 'hidden',
+          }}
+        >
+          {/* Header */}
+          <div
+            style={{
+              padding: '14px 20px',
+              borderBottom: '1px solid var(--border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'var(--white)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: 'var(--radius)',
+                  background: 'var(--black)',
+                  color: 'var(--white)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <MessageSquare size={16} />
               </div>
               <div>
-                <h3 className="text-xs font-black uppercase tracking-wider text-white flex flex-wrap items-center gap-2">
-                  <span>Legal Buddy Assistant</span>
-                  <span className="border border-white/60 px-1.5 py-0.5 text-[9px] font-black uppercase font-mono">
-                    Grounded RAG
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h3 style={{ fontSize: '0.9375rem', fontWeight: 600 }}>Legal Assistant</h3>
+                  <span className="badge badge-default" style={{ fontSize: '0.6875rem' }}>
+                    Document RAG
                   </span>
-                  <span className="border border-[#27ae60] bg-[#27ae60]/20 text-[#2ecc71] px-1.5 py-0.5 text-[9px] font-black uppercase font-mono flex items-center gap-1">
-                    <Sparkles className="h-2.5 w-2.5" />
-                    {aiProvider ? aiProvider.toUpperCase() : 'AI LIVE'}
-                  </span>
-                  <span className="border border-white/30 text-white/80 px-1.5 py-0.5 text-[9px] font-black uppercase font-mono">
-                    {document?.ragStatus === 'READY' ? 'Indexed' : document?.ragStatus === 'KEYWORD_READY' ? 'Keyword indexed' : 'Pending'}
-                  </span>
-                </h3>
-                <p className="text-[10px] text-white/60 font-mono font-semibold uppercase">
-                  {document?.originalName || 'this agreement'} · citations verified against extracted text
+                </div>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  Answers grounded in verified document text
                 </p>
               </div>
             </div>
@@ -165,40 +197,80 @@ export const DocumentChatPage: React.FC = () => {
             <button
               onClick={handleClearChat}
               disabled={messages.length === 0}
-              className="btn btn-sm bg-white text-[#c0392b] border-2 border-[#0a0a0a] hover:bg-[#c0392b] hover:text-white"
-              title="Clear Chat History"
+              className="btn btn-ghost btn-sm"
+              style={{ color: messages.length === 0 ? 'var(--text-muted)' : 'var(--danger)' }}
+              title="Clear conversation"
             >
-              <Trash2 className="h-3 w-3" />
+              <Trash2 size={14} />
               <span>Reset</span>
             </button>
           </div>
 
-          {/* Messages Container */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#f9f9f9]">
+          {/* Messages Stream */}
+          <div
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '20px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              background: 'var(--surface)',
+            }}
+          >
             {messages.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4">
-                <div className="border-[3px] border-[#0a0a0a] bg-white p-4 shadow-[4px_4px_0_#0a0a0a]">
-                  <MessageSquareQuote className="h-8 w-8 text-[#0a0a0a]" />
+              <div
+                style={{
+                  margin: 'auto',
+                  textAlign: 'center',
+                  maxWidth: '420px',
+                  padding: '30px 16px',
+                }}
+              >
+                <div
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: 'var(--radius)',
+                    background: 'var(--white)',
+                    border: '1px solid var(--border)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 16px',
+                  }}
+                >
+                  <MessageSquare size={22} style={{ color: 'var(--text-secondary)' }} />
                 </div>
-                <div>
-                  <h4 className="text-sm font-black uppercase tracking-wider text-[#0a0a0a]">Ask questions about this contract</h4>
-                  <p className="text-xs text-gray-600 mt-1 max-w-sm leading-relaxed font-medium">
-                    Ask about clauses, parties, payment terms, or legal liabilities. Answers are grounded in document evidence with verified page citations.
-                  </p>
-                </div>
+                <h4 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Ask questions about this contract
+                </h4>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '6px', lineHeight: 1.5 }}>
+                  Inquire about obligations, terms, deadlines, and liabilities. Every response is verified with exact citations.
+                </p>
 
-                <div className="w-full max-w-md pt-2 space-y-2">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 font-mono text-left">
-                    Suggested Inquiries:
+                <div style={{ marginTop: '24px', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Suggested Questions
                   </p>
                   {samplePrompts.slice(0, 3).map((prompt, idx) => (
                     <button
                       key={idx}
                       onClick={() => handleSendMessage(prompt)}
-                      className="w-full text-left border-2 border-gray-300 bg-white hover:border-[#0a0a0a] hover:bg-[#0a0a0a] hover:text-white p-2.5 text-xs font-bold transition-all flex items-center justify-between group shadow-sm"
+                      className="btn"
+                      style={{
+                        justifyContent: 'space-between',
+                        textAlign: 'left',
+                        padding: '10px 14px',
+                        fontSize: '0.8125rem',
+                        fontWeight: 500,
+                        width: '100%',
+                        background: 'var(--white)',
+                        border: '1px solid var(--border)',
+                      }}
                     >
-                      <span className="truncate">{prompt}</span>
-                      <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-white shrink-0 ml-2" />
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{prompt}</span>
+                      <ChevronRight size={14} style={{ color: 'var(--text-muted)', flexShrink: 0, marginLeft: '8px' }} />
                     </button>
                   ))}
                 </div>
@@ -211,35 +283,31 @@ export const DocumentChatPage: React.FC = () => {
                 return (
                   <div
                     key={msg.id}
-                    className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'} animate-fadeUp`}
+                    style={{
+                      display: 'flex',
+                      justifyContent: isUser ? 'flex-end' : 'flex-start',
+                    }}
                   >
-                    {!isUser && (
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center border-2 border-[#0a0a0a] bg-white text-[#0a0a0a] font-mono font-black text-[10px] mt-0.5">
-                        AI
-                      </div>
-                    )}
-
                     <div
-                      className={`max-w-[85%] p-4 text-xs leading-relaxed border-2 border-[#0a0a0a] ${
-                        isUser
-                          ? 'bg-[#0a0a0a] text-white shadow-[3px_3px_0_#666]'
-                          : 'bg-white text-[#0a0a0a] shadow-[4px_4px_0_#0a0a0a]'
-                      }`}
+                      style={{
+                        maxWidth: '85%',
+                        borderRadius: 'var(--radius)',
+                        padding: '14px 18px',
+                        background: isUser ? 'var(--black)' : 'var(--white)',
+                        color: isUser ? 'var(--white)' : 'var(--text-primary)',
+                        border: isUser ? 'none' : '1px solid var(--border)',
+                        fontSize: '0.875rem',
+                        lineHeight: 1.6,
+                      }}
                     >
-                      {/* Render answer paragraphs & key-values neatly */}
-                      <div className="space-y-2">
-                        {!isUser && msg.content.includes("could not find enough relevant passages") ? (
-                          <div className="border border-amber-300 bg-amber-50/80 p-3 text-amber-900 text-xs rounded-sm space-y-1.5">
-                            <div className="flex items-center gap-1.5 font-bold font-mono text-[11px] uppercase text-amber-800">
-                              <Info className="h-3.5 w-3.5 shrink-0" />
-                              <span>Specific Evidence Guidance</span>
-                            </div>
-                            <p className="leading-relaxed font-medium">{msg.content}</p>
-                            <div className="pt-1 flex flex-wrap gap-2 text-[10px]">
-                              <span className="text-gray-500 font-bold">Try asking:</span>
-                              <button onClick={() => handleSendMessage("Who are the contracting parties named in this agreement?")} className="underline text-amber-900 font-bold hover:text-black">Contracting parties</button>
-                              <button onClick={() => handleSendMessage("What payment terms and amounts are specified?")} className="underline text-amber-900 font-bold hover:text-black">Payment terms</button>
-                              <button onClick={() => handleSendMessage("What are the main obligations under this contract?")} className="underline text-amber-900 font-bold hover:text-black">Main obligations</button>
+                      {/* Body */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {!isUser && msg.content.includes('could not find enough relevant passages') ? (
+                          <div className="alert alert-warning" style={{ fontSize: '0.8125rem', padding: '10px 12px' }}>
+                            <Info size={16} style={{ flexShrink: 0 }} />
+                            <div>
+                              <p style={{ fontWeight: 600, marginBottom: '2px' }}>Information Not Found</p>
+                              <p>{msg.content}</p>
                             </div>
                           </div>
                         ) : (
@@ -249,166 +317,229 @@ export const DocumentChatPage: React.FC = () => {
                               const key = para.slice(0, colonIdx);
                               const rest = para.slice(colonIdx + 1);
                               return (
-                                <p key={i} className="text-xs leading-relaxed font-medium">
-                                  <span className="font-black text-[#0a0a0a] uppercase tracking-wide font-mono text-[11px]">{key}:</span>
-                                  <span className="ml-1 text-[#222]">{rest}</span>
+                                <p key={i}>
+                                  <strong style={{ color: isUser ? 'var(--white)' : 'var(--text-primary)' }}>
+                                    {key}:
+                                  </strong>
+                                  <span style={{ marginLeft: '6px' }}>{rest}</span>
                                 </p>
                               );
                             }
-                            return (
-                              <p key={i} className="whitespace-pre-wrap font-medium leading-relaxed">{para}</p>
-                            );
+                            return <p key={i}>{para}</p>;
                           })
                         )}
                       </div>
 
                       {/* Attached Citations */}
                       {!isUser && citations.length > 0 && (
-                        <div className="mt-3 pt-3 border-t-2 border-[#0a0a0a] space-y-2">
-                          <p className="text-[10px] font-black uppercase text-gray-500 font-mono flex items-center gap-1.5">
-                            <BookOpen className="h-3 w-3 text-[#0a0a0a]" />
-                            <span>Source excerpts:</span>
-                          </p>
-                          <div className="flex flex-wrap gap-2">
-                            {citations.map((cite, cIdx) => (
-                              <button
-                                key={cIdx}
-                                onClick={() => setActiveCitation(cite)}
-                                className="flex items-center gap-1.5 border border-[#0a0a0a] bg-[#f0f0f0] hover:bg-[#0a0a0a] hover:text-white px-2 py-0.5 text-[10px] font-black font-mono uppercase transition-colors cursor-pointer"
-                              >
-                                <span>PAGE {cite.pageNumber}</span>
-                                <span className="opacity-70">
-                                  {cite.lowConfidence ? 'Verify OCR' : 'Source verified'}
-                                </span>
-                              </button>
-                            ))}
-                          </div>
+                        <div
+                          style={{
+                            marginTop: '12px',
+                            paddingTop: '10px',
+                            borderTop: '1px solid var(--border)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: '6px',
+                          }}
+                        >
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, marginRight: '4px' }}>
+                            Sources:
+                          </span>
+                          {citations.map((cite, cIdx) => (
+                            <button
+                              key={cIdx}
+                              onClick={() => setActiveCitation(cite)}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '3px 8px',
+                                fontSize: '0.75rem',
+                                fontWeight: 600,
+                                borderRadius: 'var(--radius-sm)',
+                                border: '1px solid var(--border)',
+                                background: activeCitation === cite ? 'var(--black)' : 'var(--surface)',
+                                color: activeCitation === cite ? 'var(--white)' : 'var(--text-primary)',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <BookOpen size={11} />
+                              <span>Page {cite.pageNumber}</span>
+                            </button>
+                          ))}
                         </div>
                       )}
                     </div>
-
-                    {isUser && (
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center border-2 border-[#0a0a0a] bg-[#0a0a0a] text-white font-mono font-black text-[10px] mt-0.5">
-                        ME
-                      </div>
-                    )}
                   </div>
                 );
               })
             )}
 
             {isSending && (
-              <div className="flex items-center gap-3 animate-fadeUp">
-                <div className="flex h-7 w-7 items-center justify-center border-2 border-[#0a0a0a] bg-white text-[#0a0a0a] font-mono font-black text-[10px]">
-                  AI
-                </div>
-                <div className="border-2 border-[#0a0a0a] bg-white p-3 flex items-center gap-2 text-xs font-mono font-bold text-[#0a0a0a] shadow-[3px_3px_0_#0a0a0a]">
-                  <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#0a0a0a] border-t-transparent"></div>
-                  <span>Searching document chunks and formulating answer...</span>
+              <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                <div
+                  style={{
+                    padding: '12px 16px',
+                    borderRadius: 'var(--radius)',
+                    background: 'var(--white)',
+                    border: '1px solid var(--border)',
+                    fontSize: '0.8125rem',
+                    color: 'var(--text-secondary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                  }}
+                >
+                  <div className="spinner" style={{ width: '16px', height: '16px', borderWidth: '2px' }} />
+                  <span>Searching document text and preparing answer…</span>
                 </div>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Chat Input Bar */}
-          <div className="p-4 border-t-[3px] border-[#0a0a0a] bg-white">
+          {/* Input Bar */}
+          <div
+            style={{
+              padding: '16px 20px',
+              borderTop: '1px solid var(--border)',
+              background: 'var(--white)',
+            }}
+          >
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 handleSendMessage();
               }}
-              className="flex items-center border-2 border-[#0a0a0a] focus-within:shadow-[4px_4px_0_#0a0a0a] transition-all bg-white"
+              style={{ display: 'flex', gap: '8px' }}
             >
               <input
                 type="text"
                 value={inputQuestion}
                 onChange={(e) => setInputQuestion(e.target.value)}
-                placeholder="Ask any question about this contract's clauses or obligations..."
+                placeholder="Ask about clauses, payment terms, parties, or liability..."
                 disabled={isSending}
-                className="flex-1 px-4 py-3 text-xs font-medium text-[#0a0a0a] placeholder-gray-400 focus:outline-none bg-white"
+                className="input"
+                style={{ flex: 1, fontSize: '0.875rem' }}
               />
               <button
                 type="submit"
                 disabled={isSending || !inputQuestion.trim()}
-                className="flex items-center justify-center h-10 px-4 bg-[#0a0a0a] text-white border-l-2 border-[#0a0a0a] hover:bg-[#222] disabled:opacity-40 transition-colors cursor-pointer"
+                className="btn btn-primary"
+                style={{ minWidth: '44px' }}
               >
-                <Send className="h-4 w-4" />
+                <Send size={15} />
               </button>
             </form>
           </div>
         </div>
 
-        {/* Right Sidebar: Citation Inspector & Safeguard Info (1 col) */}
-        <div className="space-y-4">
-          {/* Selected Citation Inspector Drawer */}
-          <div className="border-2 border-[#0a0a0a] bg-white p-5 shadow-[4px_4px_0_#0a0a0a] space-y-3">
-            <div className="flex items-center justify-between pb-3 border-b-2 border-[#0a0a0a]">
-              <div className="flex items-center gap-2">
-                <BookOpen className="h-4 w-4 text-[#0a0a0a]" />
-                <h4 className="text-xs font-black uppercase tracking-wider text-[#0a0a0a]">Citation Inspector</h4>
+        {/* Right Sidebar: Citation Inspector & Quick Questions */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Citation Inspector */}
+          <div className="card">
+            <div className="card-header" style={{ marginBottom: '12px', paddingBottom: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <BookOpen size={15} style={{ color: 'var(--text-secondary)' }} />
+                <h4 style={{ fontSize: '0.875rem', fontWeight: 600 }}>Citation Inspector</h4>
               </div>
               {activeCitation && (
-                <span className="border border-[#0a0a0a] bg-[#0a0a0a] px-1.5 py-0.5 text-[9px] font-black uppercase text-white font-mono">
-                  PAGE {activeCitation.pageNumber}
-                </span>
+                <span className="badge badge-default">Page {activeCitation.pageNumber}</span>
               )}
             </div>
 
             {activeCitation ? (
-              <div className="space-y-3 text-xs animate-fadeUp">
-                <p className="text-[10px] text-gray-500 uppercase font-black font-mono">
-                  Retrieved Passage Evidence:
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  {activeCitation.documentName || document?.originalName} · Page {activeCitation.pageNumber}
                 </p>
-                <Link to={`/documents/${id}/ocr-preview?page=${activeCitation.pageNumber}`} className="inline-flex items-center gap-1 text-[10px] font-bold underline">
-                  Open source document and OCR pages <ExternalLink className="h-3 w-3" />
-                </Link>
-                <button className="block text-[10px] font-bold underline" onClick={() => {
-                  if (id) ApiService.openDocumentPage(id, activeCitation.pageNumber).catch(err => alert(err.message));
-                }}>Open original PDF at this page</button>
-                {activeCitation.lowConfidence && (
-                  <p className="border border-amber-600 bg-amber-50 p-2 text-[10px] font-bold text-amber-900">
-                    Low-confidence OCR: verify this passage against the original scan.
-                  </p>
-                )}
-                <p className="text-[10px] text-gray-500 font-mono">{activeCitation.documentName || document?.originalName} · {activeCitation.extractionMethod || 'extracted text'} · page {activeCitation.pageNumber}</p>
-                <div className="border-2 border-[#0a0a0a] bg-[#f9f9f9] p-3 font-mono text-[11px] text-[#0a0a0a] leading-relaxed">
+
+                <div
+                  style={{
+                    padding: '12px',
+                    background: 'var(--surface)',
+                    borderRadius: 'var(--radius)',
+                    border: '1px solid var(--border)',
+                    fontSize: '0.8125rem',
+                    lineHeight: 1.6,
+                    color: 'var(--text-primary)',
+                    fontStyle: 'italic',
+                  }}
+                >
                   "{activeCitation.excerpt}"
                 </div>
-                <p className="text-[10px] font-mono font-bold text-gray-600 uppercase">
-                  Excerpt and page verified against extracted text
-                </p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+                  <Link
+                    to={`/documents/${id}/ocr-preview?page=${activeCitation.pageNumber}`}
+                    className="btn btn-secondary btn-sm"
+                    style={{ justifyContent: 'center' }}
+                  >
+                    <span>View in OCR Preview</span>
+                    <ExternalLink size={12} />
+                  </Link>
+                  <button
+                    onClick={() => {
+                      if (id) ApiService.openDocumentPage(id, activeCitation.pageNumber).catch((err) => alert(err.message));
+                    }}
+                    className="btn btn-ghost btn-sm"
+                    style={{ justifyContent: 'center' }}
+                  >
+                    Open Original PDF Page
+                  </button>
+                </div>
               </div>
             ) : (
-              <p className="text-xs text-gray-500 py-6 text-center leading-relaxed font-medium">
-                Click any citation tag below an assistant answer to inspect the exact verbatim excerpt and page index.
+              <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', textAlign: 'center', padding: '24px 0' }}>
+                Click a page tag on any answer to view its verified source excerpt here.
               </p>
             )}
           </div>
 
-          {/* Quick Prompts Drawer */}
-          <div className="border-2 border-[#0a0a0a] bg-white p-5 shadow-[4px_4px_0_#0a0a0a] space-y-2.5">
-            <h4 className="text-xs font-black uppercase tracking-wider text-[#0a0a0a] mb-3">Common Legal Questions</h4>
-            {samplePrompts.map((prompt, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleSendMessage(prompt)}
-                disabled={isSending}
-                className="w-full text-left border-2 border-gray-200 bg-white hover:border-[#0a0a0a] hover:bg-[#0a0a0a] hover:text-white p-2 text-[11px] font-bold transition-all truncate block cursor-pointer"
-              >
-                {prompt}
-              </button>
-            ))}
+          {/* Quick Questions */}
+          <div className="card">
+            <div className="card-header" style={{ marginBottom: '12px', paddingBottom: '10px' }}>
+              <h4 style={{ fontSize: '0.875rem', fontWeight: 600 }}>Common Questions</h4>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {samplePrompts.map((prompt, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleSendMessage(prompt)}
+                  disabled={isSending}
+                  className="btn btn-ghost"
+                  style={{
+                    textAlign: 'left',
+                    justifyContent: 'flex-start',
+                    fontSize: '0.8125rem',
+                    padding: '8px 10px',
+                    borderRadius: 'var(--radius)',
+                    whiteSpace: 'normal',
+                    lineHeight: 1.4,
+                  }}
+                >
+                  <span style={{ color: 'var(--text-primary)' }}>{prompt}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Safeguard & Out-of-Document Disclaimer */}
-          <div className="border-2 border-[#0a0a0a] bg-[#f9f9f9] p-4 text-[11px] text-gray-700 space-y-1.5 shadow-[2px_2px_0_#0a0a0a]">
-            <div className="flex items-center gap-1.5 font-black uppercase text-[#0a0a0a]">
-              <Shield className="h-4 w-4 text-[#0a0a0a]" />
-              <span>Document-Grounded Assurance</span>
+          {/* Document Grounding Notice */}
+          <div
+            style={{
+              padding: '14px',
+              background: 'var(--surface)',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--border)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+              <Shield size={14} style={{ color: 'var(--text-secondary)' }} />
+              <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>Verified Grounding</p>
             </div>
-            <p className="leading-relaxed font-medium">
-              Generated explanations can contain errors. Source excerpts and page references are checked against extracted text; verify uncertain OCR against the scan. Insufficient retrieval does not prove a clause is absent.
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+              Explanations are strictly derived from extracted contract text. Always review critical clauses against the signed document.
             </p>
           </div>
         </div>
