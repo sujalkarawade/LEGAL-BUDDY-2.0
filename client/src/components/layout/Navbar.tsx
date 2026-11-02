@@ -111,13 +111,10 @@ export const Navbar: React.FC<{ sidebarCollapsed: boolean; onToggleSidebar: () =
               <Link
                 to="/lawyer-login"
                 onClick={() => setShowUserMenu(false)}
-                className="flex items-center justify-between px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#0a0a0a] hover:bg-[#0a0a0a] hover:text-white transition-colors"
+                className="flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#0a0a0a] hover:bg-[#0a0a0a] hover:text-white transition-colors"
               >
-                <div className="flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-[#0a0a0a]" />
-                  <span>Lawyer Portal</span>
-                </div>
-                <span className="border border-current px-1 py-0.2 text-[9px] font-black">Beta</span>
+                <Shield className="h-4 w-4 text-[#0a0a0a]" />
+                <span>Lawyer Portal</span>
               </Link>
 
               <button

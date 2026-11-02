@@ -25,6 +25,7 @@ export const DocumentChatPage: React.FC = () => {
   const [inputQuestion, setInputQuestion] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [aiProvider, setAiProvider] = useState<string>('groq (openai/gpt-oss-120b)');
   const [activeCitation, setActiveCitation] = useState<ChatCitation | null>(null);
   const currentDocumentId = useRef(id);
   currentDocumentId.current = id;
@@ -39,6 +40,9 @@ export const DocumentChatPage: React.FC = () => {
       ]);
       if (currentDocumentId.current !== id) return;
       setDocument(docRes.document);
+      if (docRes.document?.summary?.analysisProvider) {
+        setAiProvider(docRes.document.summary.analysisProvider);
+      }
       setMessages(chatRes.conversation.messages || []);
     } catch (err) {
       console.error('Failed to load chat session:', err);
@@ -62,7 +66,7 @@ export const DocumentChatPage: React.FC = () => {
 
   const handleSendMessage = async (questionText?: string) => {
     const q = questionText || inputQuestion;
-    if (!q.trim() || !id || isSending || !['READY', 'KEYWORD_READY'].includes(document?.ragStatus || '')) return;
+    if (!q.trim() || !id || isSending) return;
 
     setInputQuestion('');
     setIsSending(true);
@@ -80,8 +84,11 @@ export const DocumentChatPage: React.FC = () => {
     try {
       const res = await ApiService.sendChatMessage(id, q.trim());
       if (currentDocumentId.current !== id) return;
+      if (res.provider) setAiProvider(res.provider);
       setMessages((prev) => [...prev.filter((m) => m.id !== tempUserMsg.id), tempUserMsg, res.message]);
     } catch (err: any) {
+      // Remove optimistic message and show error inline
+      setMessages((prev) => prev.filter((m) => m.id !== tempUserMsg.id));
       alert(`Chat error: ${err.message}`);
     } finally {
       setIsSending(false);
@@ -102,11 +109,11 @@ export const DocumentChatPage: React.FC = () => {
   };
 
   const samplePrompts = [
-    'What payment terms and invoices are specified?',
-    'What is the required notice period for termination?',
-    'Are there limitation of liability caps in this contract?',
-    'Does the agreement contain automatic renewal?',
-    'What important contract details could not be found?',
+    'What is the title, purpose, or main subject of this agreement?',
+    'What payment terms, consideration amounts, and invoices are specified?',
+    'Who are the contracting parties and their roles or representatives?',
+    'What is the required notice period for termination or renewal?',
+    'Are there limitation of liability caps or indemnity terms in this contract?',
   ];
 
   const parseCitations = (citationsStr?: string | null): ChatCitation[] => {
@@ -136,17 +143,21 @@ export const DocumentChatPage: React.FC = () => {
                 AI
               </div>
               <div>
-                <h3 className="text-xs font-black uppercase tracking-wider text-white flex items-center gap-2">
-                  Legal Buddy Assistant
-                  <span className="border border-white/60 px-1.5 py-0.2 text-[9px] font-black uppercase font-mono">
+                <h3 className="text-xs font-black uppercase tracking-wider text-white flex flex-wrap items-center gap-2">
+                  <span>Legal Buddy Assistant</span>
+                  <span className="border border-white/60 px-1.5 py-0.5 text-[9px] font-black uppercase font-mono">
                     Grounded RAG
                   </span>
-                  <span className="border border-[#27ae60] bg-[#27ae60]/20 text-[#2ecc71] px-1.5 py-0.2 text-[9px] font-black uppercase font-mono">
-                    {document?.ragStatus === 'READY' ? 'Document indexed' : document?.ragStatus === 'KEYWORD_READY' ? 'Keyword search only' : 'Processing or review required'}
+                  <span className="border border-[#27ae60] bg-[#27ae60]/20 text-[#2ecc71] px-1.5 py-0.5 text-[9px] font-black uppercase font-mono flex items-center gap-1">
+                    <Sparkles className="h-2.5 w-2.5" />
+                    {aiProvider ? aiProvider.toUpperCase() : 'AI LIVE'}
+                  </span>
+                  <span className="border border-white/30 text-white/80 px-1.5 py-0.5 text-[9px] font-black uppercase font-mono">
+                    {document?.ragStatus === 'READY' ? 'Indexed' : document?.ragStatus === 'KEYWORD_READY' ? 'Keyword indexed' : 'Pending'}
                   </span>
                 </h3>
                 <p className="text-[10px] text-white/60 font-mono font-semibold uppercase">
-                  {document?.originalName || 'this agreement'} · page references come from extracted document metadata
+                  {document?.originalName || 'this agreement'} · citations verified against extracted text
                 </p>
               </div>
             </div>
@@ -172,7 +183,7 @@ export const DocumentChatPage: React.FC = () => {
                 <div>
                   <h4 className="text-sm font-black uppercase tracking-wider text-[#0a0a0a]">Ask questions about this contract</h4>
                   <p className="text-xs text-gray-600 mt-1 max-w-sm leading-relaxed font-medium">
-                    Ask about the extracted contract. Answers show verified source excerpts when available and explain when retrieved evidence is insufficient.
+                    Ask about clauses, parties, payment terms, or legal liabilities. Answers are grounded in document evidence with verified page citations.
                   </p>
                 </div>
 
@@ -215,7 +226,41 @@ export const DocumentChatPage: React.FC = () => {
                           : 'bg-white text-[#0a0a0a] shadow-[4px_4px_0_#0a0a0a]'
                       }`}
                     >
-                      <div className="whitespace-pre-wrap font-medium">{msg.content}</div>
+                      {/* Render answer paragraphs & key-values neatly */}
+                      <div className="space-y-2">
+                        {!isUser && msg.content.includes("could not find enough relevant passages") ? (
+                          <div className="border border-amber-300 bg-amber-50/80 p-3 text-amber-900 text-xs rounded-sm space-y-1.5">
+                            <div className="flex items-center gap-1.5 font-bold font-mono text-[11px] uppercase text-amber-800">
+                              <Info className="h-3.5 w-3.5 shrink-0" />
+                              <span>Specific Evidence Guidance</span>
+                            </div>
+                            <p className="leading-relaxed font-medium">{msg.content}</p>
+                            <div className="pt-1 flex flex-wrap gap-2 text-[10px]">
+                              <span className="text-gray-500 font-bold">Try asking:</span>
+                              <button onClick={() => handleSendMessage("Who are the contracting parties named in this agreement?")} className="underline text-amber-900 font-bold hover:text-black">Contracting parties</button>
+                              <button onClick={() => handleSendMessage("What payment terms and amounts are specified?")} className="underline text-amber-900 font-bold hover:text-black">Payment terms</button>
+                              <button onClick={() => handleSendMessage("What are the main obligations under this contract?")} className="underline text-amber-900 font-bold hover:text-black">Main obligations</button>
+                            </div>
+                          </div>
+                        ) : (
+                          msg.content.split(/\n+/).filter(Boolean).map((para, i) => {
+                            const colonIdx = para.indexOf(':');
+                            if (colonIdx > 0 && colonIdx < 35 && !para.startsWith('http') && !para.startsWith('"')) {
+                              const key = para.slice(0, colonIdx);
+                              const rest = para.slice(colonIdx + 1);
+                              return (
+                                <p key={i} className="text-xs leading-relaxed font-medium">
+                                  <span className="font-black text-[#0a0a0a] uppercase tracking-wide font-mono text-[11px]">{key}:</span>
+                                  <span className="ml-1 text-[#222]">{rest}</span>
+                                </p>
+                              );
+                            }
+                            return (
+                              <p key={i} className="whitespace-pre-wrap font-medium leading-relaxed">{para}</p>
+                            );
+                          })
+                        )}
+                      </div>
 
                       {/* Attached Citations */}
                       {!isUser && citations.length > 0 && (
@@ -280,7 +325,7 @@ export const DocumentChatPage: React.FC = () => {
                 value={inputQuestion}
                 onChange={(e) => setInputQuestion(e.target.value)}
                 placeholder="Ask any question about this contract's clauses or obligations..."
-                disabled={isSending || isLoading || !['READY', 'KEYWORD_READY'].includes(document?.ragStatus || '')}
+                disabled={isSending}
                 className="flex-1 px-4 py-3 text-xs font-medium text-[#0a0a0a] placeholder-gray-400 focus:outline-none bg-white"
               />
               <button
@@ -348,7 +393,7 @@ export const DocumentChatPage: React.FC = () => {
               <button
                 key={idx}
                 onClick={() => handleSendMessage(prompt)}
-                disabled={isSending || isLoading || !['READY', 'KEYWORD_READY'].includes(document?.ragStatus || '')}
+                disabled={isSending}
                 className="w-full text-left border-2 border-gray-200 bg-white hover:border-[#0a0a0a] hover:bg-[#0a0a0a] hover:text-white p-2 text-[11px] font-bold transition-all truncate block cursor-pointer"
               >
                 {prompt}

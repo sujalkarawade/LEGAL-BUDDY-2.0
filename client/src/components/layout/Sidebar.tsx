@@ -60,13 +60,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
       name: 'Clause Analysis',
       path: activeDocId ? `/documents/${activeDocId}/clauses` : '/documents',
       icon: SearchCode,
-      badge: activeDocId ? 'Active' : undefined,
     },
     {
       name: 'Ask Legal Buddy',
       path: activeDocId ? `/documents/${activeDocId}/chat` : '/documents',
       icon: MessageSquareQuote,
-      badge: 'AI Chat',
     },
     {
       name: 'Completeness Check',
@@ -82,7 +80,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
       name: 'Document Generator',
       path: '/document-generator',
       icon: FileCode2,
-      badge: 'Drafts',
     },
   ];
 
@@ -100,9 +97,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
           </div>
           {!collapsed && (
             <div className="flex flex-col">
-              <span className="text-sm font-black tracking-widest uppercase text-white flex items-center gap-1.5">
+              <span className="text-sm font-black tracking-widest uppercase text-white">
                 LEGAL BUDDY
-                <span className="border border-white/60 px-1 py-0.2 text-[9px] font-black">2.0</span>
               </span>
               <span className="text-[9px] text-white/50 font-bold uppercase tracking-widest">Contract Intelligence</span>
             </div>
@@ -139,13 +135,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
               {!collapsed && (
                 <div className="flex flex-1 items-center justify-between">
                   <span>{item.name}</span>
-                  {item.badge && (
-                    <span className={`border px-1.5 py-0.2 text-[9px] font-black font-mono uppercase ${
-                      isActive ? 'border-white text-white' : 'border-[#0a0a0a] text-[#0a0a0a]'
-                    }`}>
-                      {item.badge}
-                    </span>
-                  )}
                 </div>
               )}
             </NavLink>
@@ -174,9 +163,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
           {!collapsed && (
             <div className="flex flex-1 items-center justify-between">
               <span>Lawyer Portal</span>
-              <span className="border border-current px-1.5 py-0.2 text-[9px] font-black font-mono uppercase">
-                Beta
-              </span>
             </div>
           )}
         </NavLink>

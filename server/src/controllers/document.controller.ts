@@ -18,7 +18,7 @@ const processingError = 'Processing failed. Review extraction output and local r
 const textHash = (text: string) => createHash('sha256').update(text).digest('hex');
 
 async function persistIndexedChunks(documentId: string, chunks: Awaited<ReturnType<typeof PdfService.chunkPages>>): Promise<boolean> {
-  const info = await LocalEmbeddingService.getInfo();
+  const info = await LocalEmbeddingService.getInfo().catch(() => null);
   const existing = await prisma.documentChunk.findMany({ where: { documentId }, orderBy: { chunkIndex: 'asc' } });
   const unchanged = existing.length === chunks.length && chunks.every((chunk, index) => {
     const stored = existing[index];
@@ -34,11 +34,35 @@ async function persistIndexedChunks(documentId: string, chunks: Awaited<ReturnTy
 
   if (existing.length) await prisma.chatMessage.updateMany({ where: { conversation: { documentId } }, data: { sourceCitations: null } });
   const retainedIds: string[] = [];
+  let anyEmbeddingReady = false;
+
   for (const chunk of chunks) {
     const cached = existing.find(stored => stored.content === chunk.content && stored.pageNumber === chunk.pageNumber && compatible(stored));
-    const embedding = cached?.embedding || (info ? JSON.stringify((await LocalEmbeddingService.embed([chunk.content]))[0]) : null);
-    const data = { documentId, ...chunk, clauseHeading: chunk.clauseHeading || null,
-      embedding, embeddingModel: info ? info.signature : null };
+    let embedding: string | null = cached?.embedding || null;
+
+    if (!embedding && info && chunk.content && chunk.content.trim().length > 0) {
+      try {
+        const textToEmbed = chunk.content.slice(0, 4500);
+        const embRes = await LocalEmbeddingService.embed([textToEmbed]);
+        if (embRes && embRes[0]) {
+          embedding = JSON.stringify(embRes[0]);
+          anyEmbeddingReady = true;
+        }
+      } catch (embErr) {
+        // Fall back gracefully so keyword search still indexes this chunk
+        embedding = null;
+      }
+    } else if (embedding) {
+      anyEmbeddingReady = true;
+    }
+
+    const data = {
+      documentId,
+      ...chunk,
+      clauseHeading: chunk.clauseHeading || null,
+      embedding,
+      embeddingModel: (embedding && info) ? info.signature : null,
+    };
     const previous = existing.find(stored => stored.chunkIndex === chunk.chunkIndex);
     const stored = previous ? await prisma.documentChunk.update({ where: { id: previous.id }, data })
       : await prisma.documentChunk.create({ data });
@@ -48,7 +72,7 @@ async function persistIndexedChunks(documentId: string, chunks: Awaited<ReturnTy
   await prisma.$transaction([
     prisma.documentChunk.deleteMany({ where: { documentId, id: { notIn: retainedIds } } }),
   ]);
-  return Boolean(info);
+  return Boolean(info && anyEmbeddingReady);
 }
 
 export class DocumentController {
@@ -833,6 +857,12 @@ export class DocumentController {
 
       let conversation = await prisma.chatConversation.findFirst({
         where: { documentId: id, userId },
+        include: {
+          messages: {
+            orderBy: { createdAt: 'asc' },
+            take: 10,
+          },
+        },
       });
 
       if (!conversation) {
@@ -842,8 +872,15 @@ export class DocumentController {
             userId,
             title: `Chat: ${question.slice(0, 30)}...`,
           },
+          include: { messages: true },
         });
       }
+
+      // Build conversation history for context-aware follow-up answers
+      const conversationHistory = (conversation.messages || []).map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
 
       // Record User Message
       await prisma.chatMessage.create({
@@ -864,8 +901,8 @@ export class DocumentController {
       const retrievalLatencyMs = Math.round(performance.now() - retrievalStartedAt);
       const evidence = retrieval.chunks;
 
-      // Get Grounded Answer
-      const answerResult = await LocalAnalysisService.answerQuestion(question.trim(), evidence, [], document.originalName);
+      // Get Grounded Answer with conversation history for follow-up context
+      const answerResult = await LocalAnalysisService.answerQuestion(question.trim(), evidence, conversationHistory, document.originalName);
 
       // Lock the document revision while saving: indexing invalidates old citations after this lock.
       const assistantMsg = await prisma.$transaction(async tx => {

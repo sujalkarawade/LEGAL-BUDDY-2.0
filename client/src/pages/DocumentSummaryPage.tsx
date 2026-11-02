@@ -79,14 +79,29 @@ export const DocumentSummaryPage: React.FC = () => {
   }
 
   const renderValueOrNotFound = (val: string | null | undefined) => {
-    if (!val || val.toLowerCase().includes('not found') || val.trim() === '') {
+    if (!val || val.toLowerCase().includes('not found') || val.toLowerCase().includes('not explicitly specified') || val.trim() === '') {
       return (
         <span className="italic text-[#888888] font-mono text-xs">
           Not found in document
         </span>
       );
     }
-    return <p className="text-[#0a0a0a] text-xs leading-relaxed font-mono">{val}</p>;
+    // Split into paragraphs/bullets for neat display
+    const lines = val.split(/\n+/).map(l => l.trim()).filter(Boolean);
+    if (lines.length > 1) {
+      return (
+        <div className="space-y-1.5">
+          {lines.map((line, i) => (
+            <p key={i} className={`text-[#0a0a0a] text-xs leading-relaxed ${
+              line.match(/^[-•·*]/) ? 'pl-2 border-l-2 border-gray-300 font-medium' : 'font-medium'
+            }`}>
+              {line.replace(/^[-•·*]\s*/, '')}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return <p className="text-[#0a0a0a] text-xs leading-relaxed font-medium">{val}</p>;
   };
 
   return (
@@ -120,9 +135,20 @@ export const DocumentSummaryPage: React.FC = () => {
 
         {/* High-level Narrative Overview */}
         {summary.rawSummary && (
-          <div className="mt-5 border-2 border-[#0a0a0a] bg-[#f9f9f9] p-4 text-xs text-[#0a0a0a] font-medium leading-relaxed shadow-[2px_2px_0_#0a0a0a]">
-            <p className="font-black uppercase tracking-wider text-xs text-[#0a0a0a] mb-1 font-mono">Overview Synthesis:</p>
-            {summary.rawSummary}
+          <div className="mt-5 border-2 border-[#0a0a0a] bg-[#f9f9f9] p-4 shadow-[2px_2px_0_#0a0a0a]">
+            <div className="flex items-center justify-between mb-2">
+              <p className="font-black uppercase tracking-wider text-xs text-[#0a0a0a] font-mono">Overview Synthesis:</p>
+              {summary.analysisProvider && (
+                <span className="border border-[#0a0a0a] bg-[#0a0a0a] px-2 py-0.5 text-[9px] font-black uppercase text-white font-mono">
+                  {summary.analysisProvider.includes('groq') || summary.analysisProvider.includes('openrouter') ? '⚡ AI Generated' : '⚙ Rule Engine'}
+                </span>
+              )}
+            </div>
+            <div className="space-y-2">
+              {summary.rawSummary.split(/\n+/).filter(Boolean).map((para, i) => (
+                <p key={i} className="text-xs text-[#0a0a0a] font-medium leading-relaxed">{para}</p>
+              ))}
+            </div>
           </div>
         )}
 
