@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext.js';
+import { ThemeProvider } from './context/ThemeContext.js';
 import { AppLayout } from './components/layout/AppLayout.js';
 
 // Pages
@@ -39,41 +40,43 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 export const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Public Authentication Routes */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/lawyer-login" element={<LawyerLoginPage />} />
+    <ThemeProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Public Authentication Routes */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/lawyer-login" element={<LawyerLoginPage />} />
 
-          {/* Protected Application Routes */}
-          <Route
-            element={
-              <ProtectedRoute>
-                <AppLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/upload" element={<UploadPage />} />
-            <Route path="/documents" element={<DocumentsPage />} />
-            <Route path="/documents/:id/summary" element={<DocumentSummaryPage />} />
-            <Route path="/documents/:id/ocr-preview" element={<DocumentOcrPreviewPage />} />
-            <Route path="/documents/:id/clauses" element={<DocumentClausesPage />} />
-            <Route path="/documents/:id/chat" element={<DocumentChatPage />} />
-            <Route path="/documents/:id/completeness" element={<DocumentCompletenessPage />} />
-            <Route path="/documents/:id/obligations" element={<DocumentObligationsPage />} />
-            <Route path="/document-generator" element={<DocumentGeneratorPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-          </Route>
+            {/* Protected Application Routes */}
+            <Route
+              element={
+                <ProtectedRoute>
+                  <AppLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/upload" element={<UploadPage />} />
+              <Route path="/documents" element={<DocumentsPage />} />
+              <Route path="/documents/:id/summary" element={<DocumentSummaryPage />} />
+              <Route path="/documents/:id/ocr-preview" element={<DocumentOcrPreviewPage />} />
+              <Route path="/documents/:id/clauses" element={<DocumentClausesPage />} />
+              <Route path="/documents/:id/chat" element={<DocumentChatPage />} />
+              <Route path="/documents/:id/completeness" element={<DocumentCompletenessPage />} />
+              <Route path="/documents/:id/obligations" element={<DocumentObligationsPage />} />
+              <Route path="/document-generator" element={<DocumentGeneratorPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+            </Route>
 
-          {/* Catch-all route */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+            {/* Catch-all route */}
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </ThemeProvider>
   );
 };
 

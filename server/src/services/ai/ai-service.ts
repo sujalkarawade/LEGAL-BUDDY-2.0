@@ -52,7 +52,9 @@ export class AiService {
       try {
         AiService.openRouterClient = new OpenAI({
           apiKey: OPENROUTER_API_KEY.trim(),
-          baseURL: 'https://openrouter.ai/api/v1', timeout: 20000, maxRetries: 0,
+          baseURL: 'https://openrouter.ai/api/v1',
+          timeout: 45000,
+          maxRetries: 0,
           defaultHeaders: {
             'HTTP-Referer': 'http://localhost:5173',
             'X-Title': 'Legal Buddy 2.0',
@@ -115,16 +117,19 @@ export class AiService {
       throw new Error('No live LLM configured');
     }
 
-    const { jsonMode = false, temperature = 0.1, maxTokens = 2000 } = options;
+    const { jsonMode = false, temperature = 0.1, maxTokens = 800 } = options;
 
     // Build call configs
     const candidates: Array<{ provider: 'groq' | 'openrouter'; client: any; model: string; maxTokens: number }> = [];
 
     if (this.groqClient) {
-      const groqModels = [GROQ_MODEL, 'openai/gpt-oss-120b', 'qwen/qwen3.8-27b', 'openai/gpt-oss-20b']
-        .filter((m, i, arr) => m && arr.indexOf(m) === i);
+      // Prioritize verified models, exclude 20b which fails JSON mode
+      const groqModels = [GROQ_MODEL, 'openai/gpt-oss-120b', 'qwen/qwen3.8-27b']
+        .filter((m, i, arr) => m && arr.indexOf(m) === i && !m.includes('20b'));
       for (const model of groqModels) {
-        candidates.push({ provider: 'groq', client: this.groqClient, model, maxTokens: Math.min(maxTokens, 3000) });
+        // qwen has a 1,000 OTPM rate limit, cap to 450. 120b capped to 800 for fast TPM compliance.
+        const modelMaxTokens = model.includes('qwen') ? Math.min(maxTokens, 450) : Math.min(maxTokens, 800);
+        candidates.push({ provider: 'groq', client: this.groqClient, model, maxTokens: modelMaxTokens });
       }
     }
 
@@ -133,7 +138,7 @@ export class AiService {
         provider: 'openrouter',
         client: this.openRouterClient,
         model: OPENROUTER_MODEL,
-        maxTokens: Math.min(maxTokens, 750), // Cap tokens to avoid 402 on low balance
+        maxTokens: Math.min(maxTokens, 450), // Cap tokens to avoid 402 on low account balance
       });
     }
 
@@ -151,12 +156,28 @@ export class AiService {
           payload.response_format = { type: 'json_object' };
         }
 
-        const completion = await candidate.client.chat.completions.create(payload, { timeout: 25000 });
+        const completion = await candidate.client.chat.completions.create(payload, { timeout: 45000 });
         const text = completion.choices[0]?.message?.content || '';
         if (text.trim().length > 0) {
           return { text, provider: candidate.provider, model: candidate.model };
         }
       } catch (err: any) {
+        // If JSON mode was rejected by the provider model, retry without response_format
+        if (jsonMode && err?.message?.includes('json_validate_failed')) {
+          try {
+            const retryPayload: any = {
+              model: candidate.model,
+              messages,
+              temperature,
+              max_tokens: candidate.maxTokens,
+            };
+            const retryComp = await candidate.client.chat.completions.create(retryPayload, { timeout: 45000 });
+            const retryText = retryComp.choices[0]?.message?.content || '';
+            if (retryText.trim().length > 0) {
+              return { text: retryText, provider: candidate.provider, model: candidate.model };
+            }
+          } catch (_) {}
+        }
         console.warn(`[AiService] Provider ${candidate.provider} (${candidate.model}) failed: ${err.message || err}`);
         lastError = err;
       }
@@ -202,15 +223,15 @@ Return ONLY a valid JSON object matching this schema:
   "rawSummary": "string (comprehensive executive summary in plain professional English)"
 }`;
 
-        // Truncate to safe token window (around 14,000 characters to stay within free-tier TPM limit)
-        const contextText = contractText.slice(0, 14000);
+        // Truncate to safe token window (around 6,000 characters to stay safely within free-tier TPM limit)
+        const contextText = contractText.slice(0, 6000);
 
         const { text, provider, model } = await this.executeCompletion(
           [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: `Filename: ${filename}\n\nContract Text:\n${contextText}` },
           ],
-          { jsonMode: true, temperature: 0.1, maxTokens: 1500 }
+          { jsonMode: true, temperature: 0.1, maxTokens: 800 }
         );
 
         const parsed = extractJsonFromText(text);
@@ -470,7 +491,7 @@ Return ONLY valid JSON:
         { role: 'system', content: systemPrompt },
         ...historyMessages,
         { role: 'user', content: JSON.stringify({ question, documentName, passages: passagesPayload }) },
-      ], { jsonMode: true, temperature: 0, maxTokens: 2000 });
+      ], { jsonMode: true, temperature: 0, maxTokens: 800 });
 
       const parsed = extractJsonFromText(text);
       if (!parsed || typeof parsed !== 'object') {

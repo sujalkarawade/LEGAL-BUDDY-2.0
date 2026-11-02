@@ -48,7 +48,7 @@ export const DocumentCompletenessPage: React.FC = () => {
   const notFoundCount = checks.filter((c) => c.status === 'NOT_FOUND').length;
 
   return (
-    <div style={{ maxWidth: '900px', margin: '0 auto' }} className="animate-fade-in">
+    <div style={{ width: '100%', margin: '0' }} className="animate-fade-in">
       <DocumentNavHeader document={document} />
 
       {/* Overview */}

@@ -167,7 +167,7 @@ export const DocumentOcrPreviewPage: React.FC = () => {
   const isCurrentModified = currentPage && currentText !== currentPage.text;
 
   return (
-    <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+    <div style={{ width: '100%', margin: '0' }} className="animate-fade-in">
       <DocumentNavHeader document={document} />
 
       {/* OCR Overview & Metrics */}

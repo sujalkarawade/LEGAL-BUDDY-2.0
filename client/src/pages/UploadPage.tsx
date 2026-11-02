@@ -92,6 +92,8 @@ export const UploadPage: React.FC = () => {
         doc.ocrStatus === 'PENDING_REVIEW' || doc.ocrStatus === 'OCR_COMPLETED' ||
         (doc.ocrResult && doc.ocrResult.scannedPagesCount > 0) || !!doc.errorMessage;
 
+      window.dispatchEvent(new Event('document_uploaded'));
+
       if (previewOcrFirst || isScannedOrFlagged) {
         navigate(`/documents/${doc.id}/ocr-preview`);
       } else {
@@ -104,7 +106,7 @@ export const UploadPage: React.FC = () => {
   };
 
   return (
-    <div style={{ maxWidth: '760px', margin: '0 auto' }} className="animate-fade-in">
+    <div style={{ maxWidth: '840px', width: '100%', margin: '0 auto' }} className="animate-fade-in">
       <div className="page-header">
         <div className="page-header-text">
           <h1>Upload Contract</h1>
@@ -259,15 +261,15 @@ export const UploadPage: React.FC = () => {
       </div>
 
       {/* Supported types */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px', width: '100%' }}>
         {[
           { title: 'NDAs & Confidentiality', desc: 'Identifies mutual vs unilateral definitions, disclosure exclusions, and sunset periods.' },
           { title: 'Master Services & SOWs', desc: 'Detects liability caps, indemnification, payment terms, and IP ownership transfers.' },
           { title: 'Employment Agreements', desc: 'Highlights probation, termination notice, non-compete covenants, and IP assignment.' },
         ].map(({ title, desc }) => (
-          <div key={title} className="card" style={{ padding: '16px' }}>
-            <p style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-primary)', marginBottom: '6px' }}>{title}</p>
-            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>{desc}</p>
+          <div key={title} className="card" style={{ padding: '18px' }}>
+            <p style={{ fontWeight: 700, fontSize: '0.9375rem', color: 'var(--text-primary)', marginBottom: '6px' }}>{title}</p>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{desc}</p>
           </div>
         ))}
       </div>

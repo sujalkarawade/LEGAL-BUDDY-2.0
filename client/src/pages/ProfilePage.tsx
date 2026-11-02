@@ -10,7 +10,7 @@ export const ProfilePage: React.FC = () => {
     : 'LB';
 
   return (
-    <div style={{ maxWidth: '680px', margin: '0 auto' }} className="animate-fade-in">
+    <div style={{ width: '100%', margin: '0' }} className="animate-fade-in">
       <div className="page-header">
         <div className="page-header-text">
           <h1>Profile & Settings</h1>

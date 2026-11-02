@@ -96,7 +96,7 @@ export const DocumentSummaryPage: React.FC = () => {
   ];
 
   return (
-    <div style={{ maxWidth: '960px', margin: '0 auto' }} className="animate-fade-in">
+    <div style={{ width: '100%', margin: '0' }} className="animate-fade-in">
       <DocumentNavHeader document={document} />
 
       {/* Overview card */}

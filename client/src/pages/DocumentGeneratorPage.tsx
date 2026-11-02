@@ -137,7 +137,7 @@ export const DocumentGeneratorPage: React.FC = () => {
   ];
 
   return (
-    <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+    <div style={{ width: '100%', margin: '0' }} className="animate-fade-in">
       {/* Page Header */}
       <div className="page-header">
         <div className="page-header-text">

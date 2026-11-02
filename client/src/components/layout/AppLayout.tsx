@@ -4,7 +4,7 @@ import { Sidebar } from './Sidebar.js';
 import { Navbar } from './Navbar.js';
 
 export const AppLayout: React.FC = () => {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
   return (
     <div
@@ -30,8 +30,11 @@ export const AppLayout: React.FC = () => {
           style={{
             flex: 1,
             overflowY: 'auto',
-            padding: '28px 28px',
+            padding: '24px 32px',
             background: 'var(--surface)',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
           <Outlet />

@@ -61,7 +61,7 @@ export const DocumentsPage: React.FC = () => {
   };
 
   return (
-    <div style={{ maxWidth: '1100px', margin: '0 auto' }} className="animate-fade-in">
+    <div style={{ width: '100%', margin: '0' }} className="animate-fade-in">
       <div className="page-header">
         <div className="page-header-text">
           <h1>My Documents</h1>
@@ -160,10 +160,10 @@ export const DocumentsPage: React.FC = () => {
                         <Link
                           to={`/documents/${doc.id}/summary`}
                           style={{
-                            fontWeight: 600, fontSize: '0.8125rem', color: 'var(--text-primary)',
+                            fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-primary)',
                             textDecoration: 'none', display: 'block',
                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                            maxWidth: '200px',
+                            maxWidth: '420px',
                           }}
                           onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
                           onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}

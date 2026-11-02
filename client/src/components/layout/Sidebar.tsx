@@ -20,9 +20,9 @@ interface SidebarProps {
 }
 
 const NAV_ITEMS = [
-  { name: 'Dashboard',       path: '/dashboard',              icon: LayoutDashboard, doc: false },
-  { name: 'Upload Contract', path: '/upload',                 icon: UploadCloud,     doc: false },
-  { name: 'My Documents',    path: '/documents',              icon: FileText,        doc: false },
+  { name: 'Dashboard',       path: '/dashboard', icon: LayoutDashboard },
+  { name: 'Upload Contract', path: '/upload',    icon: UploadCloud },
+  { name: 'My Documents',    path: '/documents', icon: FileText },
 ];
 
 const DOC_ITEMS = [
@@ -40,17 +40,39 @@ const BOTTOM_ITEMS = [
 
 export const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
   const location = useLocation();
+  const [hasDocuments, setHasDocuments] = useState<boolean>(false);
   const [latestDocId, setLatestDocId] = useState<string | null>(null);
+  const [hoveredTooltip, setHoveredTooltip] = useState<{ name: string; top: number } | null>(null);
 
   const docMatch = location.pathname.match(/\/documents\/([a-zA-Z0-9_-]+)/);
   const activeDocId = docMatch ? docMatch[1] : latestDocId;
 
-  useEffect(() => {
+  const fetchDocs = () => {
     ApiService.getDocuments()
       .then((res) => {
-        if (res.documents?.length > 0) setLatestDocId(res.documents[0].id);
+        const docs = res.documents || [];
+        if (docs.length > 0) {
+          setHasDocuments(true);
+          setLatestDocId(docs[0].id);
+        } else {
+          setHasDocuments(false);
+          setLatestDocId(null);
+        }
       })
-      .catch(() => {});
+      .catch(() => {
+        setHasDocuments(false);
+      });
+  };
+
+  useEffect(() => {
+    fetchDocs();
+    const handleDocUpdate = () => fetchDocs();
+    window.addEventListener('document_uploaded', handleDocUpdate);
+    window.addEventListener('documents_changed', handleDocUpdate);
+    return () => {
+      window.removeEventListener('document_uploaded', handleDocUpdate);
+      window.removeEventListener('documents_changed', handleDocUpdate);
+    };
   }, [location.pathname]);
 
   const sidebarStyle: React.CSSProperties = {
@@ -60,40 +82,54 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
     borderRight: '1px solid var(--border)',
     display: 'flex',
     flexDirection: 'column',
-    transition: 'width 250ms ease',
-    overflow: 'hidden',
+    transition: 'width 240ms cubic-bezier(0.16, 1, 0.3, 1)',
     zIndex: 40,
+    position: 'relative',
   };
 
   const linkStyle = (isActive: boolean): React.CSSProperties => ({
     display: 'flex',
     alignItems: 'center',
-    gap: '10px',
-    padding: collapsed ? '10px 0' : '9px 12px',
+    gap: '12px',
+    padding: collapsed ? '11px 0' : '10px 14px',
     justifyContent: collapsed ? 'center' : 'flex-start',
-    fontSize: '0.8125rem',
+    fontSize: '0.875rem',
     fontWeight: isActive ? 600 : 500,
-    color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
+    color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
     borderRadius: 'var(--radius)',
     textDecoration: 'none',
     whiteSpace: 'nowrap',
-    transition: 'background var(--transition), color var(--transition)',
+    transition: 'all 160ms cubic-bezier(0.16, 1, 0.3, 1)',
     background: isActive ? 'var(--surface-alt)' : 'transparent',
+    borderLeft: isActive && !collapsed ? '3px solid var(--text-primary)' : '3px solid transparent',
   });
 
   const isDocActive = (key: string) => location.pathname.includes(`/${key}`);
 
+  const handleMouseEnter = (name: string, e: React.MouseEvent<HTMLElement>) => {
+    if (!collapsed) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    setHoveredTooltip({
+      name,
+      top: rect.top + rect.height / 2,
+    });
+  };
+
+  const handleMouseLeave = () => {
+    setHoveredTooltip(null);
+  };
+
   return (
     <aside style={sidebarStyle}>
-      {/* Brand */}
+      {/* Brand - Removed "Contract Intelligence" per requirement */}
       <NavLink
         to="/dashboard"
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '10px',
+          gap: '12px',
           height: 'var(--nav-height)',
-          padding: collapsed ? '0' : '0 16px',
+          padding: collapsed ? '0' : '0 18px',
           justifyContent: collapsed ? 'center' : 'flex-start',
           textDecoration: 'none',
           borderBottom: '1px solid var(--border)',
@@ -102,9 +138,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
       >
         <span
           style={{
-            width: '28px',
-            height: '28px',
+            width: '32px',
+            height: '32px',
             background: 'var(--black)',
+            color: 'var(--white)',
             borderRadius: 'var(--radius)',
             display: 'flex',
             alignItems: 'center',
@@ -112,84 +149,118 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
             flexShrink: 0,
           }}
         >
-          <Scale size={15} color="white" />
+          <Scale size={18} />
         </span>
         {!collapsed && (
           <div>
-            <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-primary)', lineHeight: 1.2 }}>Legal Buddy</p>
-            <p style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', lineHeight: 1 }}>Contract Intelligence</p>
+            <p style={{ fontWeight: 700, fontSize: '0.9375rem', color: 'var(--text-primary)', lineHeight: 1.2 }}>
+              Legal Buddy
+            </p>
           </div>
         )}
       </NavLink>
 
-      {/* Main nav */}
-      <nav style={{ flex: 1, overflowY: 'auto', padding: '12px 8px 0', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-        {/* Core pages */}
+      {/* Main navigation */}
+      <nav
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          padding: '14px 10px 0',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px',
+        }}
+      >
+        {/* Core items */}
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
-          const active = location.pathname === item.path ||
+          const active =
+            location.pathname === item.path ||
             (item.path !== '/dashboard' && item.path !== '/documents' && location.pathname.startsWith(item.path));
+
           return (
-            <NavLink
+            <div
               key={item.path}
-              to={item.path}
-              title={collapsed ? item.name : undefined}
-              style={({ isActive }) => linkStyle(active || isActive)}
-              onMouseEnter={e => { if (!(active)) (e.currentTarget as HTMLElement).style.background = 'var(--surface)'; }}
-              onMouseLeave={e => { if (!(active)) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+              onMouseEnter={(e) => handleMouseEnter(item.name, e)}
+              onMouseLeave={handleMouseLeave}
             >
-              <Icon size={16} style={{ flexShrink: 0 }} />
-              {!collapsed && <span>{item.name}</span>}
-            </NavLink>
+              <NavLink
+                to={item.path}
+                style={({ isActive }) => linkStyle(active || isActive)}
+                onMouseEnter={(e) => {
+                  if (!active) (e.currentTarget as HTMLElement).style.background = 'var(--surface)';
+                }}
+                onMouseLeave={(e) => {
+                  if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent';
+                }}
+              >
+                <Icon size={18} style={{ flexShrink: 0 }} />
+                {!collapsed && <span>{item.name}</span>}
+              </NavLink>
+            </div>
           );
         })}
 
-        {/* Document analysis section */}
-        {!collapsed && (
-          <p
-            style={{
-              fontSize: '0.6875rem',
-              fontWeight: 600,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-              color: 'var(--text-muted)',
-              padding: '14px 12px 4px',
-            }}
-          >
-            Analysis
-          </p>
+        {/* Document analysis section - ONLY APPEARS WHEN DOCUMENT IS UPLOADED */}
+        {hasDocuments && (
+          <>
+            {!collapsed && (
+              <p
+                style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.07em',
+                  color: 'var(--text-muted)',
+                  padding: '16px 14px 4px',
+                }}
+              >
+                Analysis
+              </p>
+            )}
+            {collapsed && <div style={{ height: '8px' }} />}
+
+            {DOC_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const path = activeDocId ? `/documents/${activeDocId}/${item.key}` : '/documents';
+              const active = isDocActive(item.key);
+
+              return (
+                <div
+                  key={item.key}
+                  onMouseEnter={(e) => handleMouseEnter(item.name, e)}
+                  onMouseLeave={handleMouseLeave}
+                >
+                  <NavLink
+                    to={path}
+                    style={() => linkStyle(active)}
+                    onMouseEnter={(e) => {
+                      if (!active) (e.currentTarget as HTMLElement).style.background = 'var(--surface)';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent';
+                    }}
+                  >
+                    <Icon size={18} style={{ flexShrink: 0 }} />
+                    {!collapsed && <span>{item.name}</span>}
+                  </NavLink>
+                </div>
+              );
+            })}
+          </>
         )}
-        {collapsed && <div style={{ height: '8px' }} />}
 
-        {DOC_ITEMS.map((item) => {
-          const Icon = item.icon;
-          const path = activeDocId ? `/documents/${activeDocId}/${item.key}` : '/documents';
-          const active = isDocActive(item.key);
-          return (
-            <NavLink
-              key={item.key}
-              to={path}
-              title={collapsed ? item.name : undefined}
-              style={() => linkStyle(active)}
-              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'var(--surface)'; }}
-              onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = active ? 'var(--surface-alt)' : 'transparent'; }}
-            >
-              <Icon size={16} style={{ flexShrink: 0 }} />
-              {!collapsed && <span>{item.name}</span>}
-            </NavLink>
-          );
-        })}
-
-        {/* Bottom section */}
+        {/* Tools section */}
         {!collapsed && (
           <p
             style={{
-              fontSize: '0.6875rem',
-              fontWeight: 600,
+              fontSize: '0.75rem',
+              fontWeight: 700,
               textTransform: 'uppercase',
-              letterSpacing: '0.06em',
+              letterSpacing: '0.07em',
               color: 'var(--text-muted)',
-              padding: '14px 12px 4px',
+              padding: '16px 14px 4px',
             }}
           >
             Tools
@@ -199,18 +270,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
 
         {BOTTOM_ITEMS.map((item) => {
           const Icon = item.icon;
+          const active = location.pathname.startsWith(item.path);
+
           return (
-            <NavLink
+            <div
               key={item.path}
-              to={item.path}
-              title={collapsed ? item.name : undefined}
-              style={({ isActive }) => linkStyle(isActive)}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface)'; }}
-              onMouseLeave={e => { }}
+              onMouseEnter={(e) => handleMouseEnter(item.name, e)}
+              onMouseLeave={handleMouseLeave}
             >
-              <Icon size={16} style={{ flexShrink: 0 }} />
-              {!collapsed && <span>{item.name}</span>}
-            </NavLink>
+              <NavLink
+                to={item.path}
+                style={({ isActive }) => linkStyle(active || isActive)}
+                onMouseEnter={(e) => {
+                  if (!active) (e.currentTarget as HTMLElement).style.background = 'var(--surface)';
+                }}
+                onMouseLeave={(e) => {
+                  if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent';
+                }}
+              >
+                <Icon size={18} style={{ flexShrink: 0 }} />
+                {!collapsed && <span>{item.name}</span>}
+              </NavLink>
+            </div>
           );
         })}
       </nav>
@@ -219,14 +300,56 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
       {!collapsed && (
         <div
           style={{
-            padding: '12px 16px',
+            padding: '14px 18px',
             borderTop: '1px solid var(--border)',
-            fontSize: '0.6875rem',
+            fontSize: '0.75rem',
             color: 'var(--text-muted)',
             lineHeight: 1.5,
           }}
         >
           AI-assisted review only. Not legal advice.
+        </div>
+      )}
+
+      {/* High-fidelity Fixed Tooltip Popup for Minimized Sidebar */}
+      {collapsed && hoveredTooltip && (
+        <div
+          style={{
+            position: 'fixed',
+            left: 'calc(var(--sidebar-collapsed) + 8px)',
+            top: hoveredTooltip.top,
+            transform: 'translateY(-50%)',
+            background: 'var(--tooltip-bg, #0f172a)',
+            color: 'var(--tooltip-text, #ffffff)',
+            padding: '6px 12px',
+            borderRadius: '6px',
+            fontSize: '0.8125rem',
+            fontWeight: 600,
+            whiteSpace: 'nowrap',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.28)',
+            pointerEvents: 'none',
+            zIndex: 99999,
+            display: 'flex',
+            alignItems: 'center',
+            letterSpacing: '0.01em',
+            animation: 'sidebar-tooltip-in 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
+            border: '1px solid var(--border)',
+          }}
+        >
+          <span
+            style={{
+              position: 'absolute',
+              left: '-4px',
+              top: '50%',
+              transform: 'translateY(-50%) rotate(45deg)',
+              width: '8px',
+              height: '8px',
+              background: 'var(--tooltip-bg, #0f172a)',
+              borderLeft: '1px solid var(--border)',
+              borderBottom: '1px solid var(--border)',
+            }}
+          />
+          {hoveredTooltip.name}
         </div>
       )}
     </aside>

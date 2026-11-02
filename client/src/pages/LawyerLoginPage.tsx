@@ -12,46 +12,34 @@ export const LawyerLoginPage: React.FC = () => {
         justifyContent: 'center',
         background: 'var(--surface)',
         padding: '32px 16px',
+        position: 'relative',
       }}
     >
+      {/* Top Left Corner Back Text Link (No container, no icon) */}
+      <Link
+        to="/login"
+        style={{
+          position: 'fixed',
+          top: '24px',
+          left: '24px',
+          display: 'inline-block',
+          fontSize: '0.875rem',
+          fontWeight: 500,
+          color: 'var(--text-secondary)',
+          textDecoration: 'none',
+          transition: 'color var(--transition)',
+          zIndex: 50,
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
+        onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-secondary)')}
+      >
+        Back to User Login
+      </Link>
+
       <div style={{ width: '100%', maxWidth: '580px' }}>
-        {/* Back Link */}
-        <div style={{ marginBottom: '20px' }}>
-          <Link
-            to="/login"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '0.8125rem',
-              fontWeight: 500,
-              color: 'var(--text-secondary)',
-              textDecoration: 'none',
-            }}
-          >
-            <ArrowLeft size={14} />
-            <span>Back to User Login</span>
-          </Link>
-        </div>
 
-        {/* Header */}
+        {/* Header (No icon) */}
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <div
-            style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: 'var(--radius)',
-              background: 'var(--black)',
-              color: 'var(--white)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 14px',
-            }}
-          >
-            <Briefcase size={22} />
-          </div>
-
           <span className="badge badge-warning" style={{ marginBottom: '10px' }}>
             <Clock size={12} style={{ marginRight: '4px' }} />
             Phase 2 — Under Active Development

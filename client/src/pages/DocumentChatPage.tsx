@@ -125,7 +125,7 @@ export const DocumentChatPage: React.FC = () => {
   };
 
   return (
-    <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+    <div style={{ width: '100%', margin: '0' }} className="animate-fade-in">
       <DocumentNavHeader document={document} />
 
       {!['READY', 'KEYWORD_READY'].includes(document?.ragStatus || '') && (

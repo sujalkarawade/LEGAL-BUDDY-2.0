@@ -45,7 +45,7 @@ export const DocumentObligationsPage: React.FC = () => {
   const filteredObligations = obligations.filter((o) => categoryFilter === 'ALL' || o.category === categoryFilter);
 
   return (
-    <div style={{ maxWidth: '960px', margin: '0 auto' }} className="animate-fade-in">
+    <div style={{ width: '100%', margin: '0' }} className="animate-fade-in">
       <DocumentNavHeader document={document} />
 
       {/* Header */}

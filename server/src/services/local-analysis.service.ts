@@ -1,4 +1,5 @@
 import { AiService } from './ai/ai-service.js';
+import { RuleEngineService } from './ai/rule-engine.js';
 import type { EvidenceChunk } from './grounded-answer.js';
 import type { ContractSummaryResult, ClauseFindingResult, CompletenessItemResult, ObligationResult, ChatAnswerResult } from './ai/ai-types.js';
 
@@ -13,15 +14,15 @@ export class LocalAnalysisService {
   }
 
   static async analyzeClauses(contractText: string): Promise<ClauseFindingResult[]> {
-    return AiService.analyzeClauses(contractText);
+    return RuleEngineService.analyzeClauses(contractText);
   }
 
   static async checkCompleteness(contractText: string, category: string): Promise<CompletenessItemResult[]> {
-    return AiService.checkCompleteness(contractText, category);
+    return RuleEngineService.checkCompleteness(contractText, category);
   }
 
   static async extractObligations(contractText: string): Promise<ObligationResult[]> {
-    return AiService.extractObligations(contractText);
+    return RuleEngineService.extractObligations(contractText);
   }
 
   static async answerQuestion(
