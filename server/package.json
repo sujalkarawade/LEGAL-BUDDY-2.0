@@ -17,7 +17,13 @@
     "test:rag:integration": "tsx --test scripts/rag-integration.test.ts",
     "test:api": "tsx scripts/test-api.ts",
     "clean:uploads": "tsx scripts/clean-uploads.ts",
-    "prisma:migrate": "prisma migrate deploy"
+    "prisma:migrate": "prisma migrate deploy",
+    "admin:promote": "tsx scripts/promote-admin.ts",
+    "test:connect": "tsx --test scripts/connect-unit.test.ts",
+    "test:connect:api": "tsx --test scripts/connect-api.test.ts",
+    "test:insights": "tsx --test scripts/insights-unit.test.ts",
+    "eval:clauses": "tsx scripts/evaluate-clauses.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

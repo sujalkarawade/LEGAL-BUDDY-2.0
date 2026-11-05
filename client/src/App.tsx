@@ -19,6 +19,18 @@ import { DocumentCompletenessPage } from './pages/DocumentCompletenessPage.js';
 import { DocumentObligationsPage } from './pages/DocumentObligationsPage.js';
 import { DocumentGeneratorPage } from './pages/DocumentGeneratorPage.js';
 import { ProfilePage } from './pages/ProfilePage.js';
+import { DocumentCompliancePage } from './pages/DocumentCompliancePage.js';
+import { DocumentComparePage } from './pages/DocumentComparePage.js';
+import { EvaluationPage } from './pages/EvaluationPage.js';
+// Legal Buddy Connect
+import { RequireRole } from './components/connect/RequireRole.js';
+import { FindLawyerPage } from './pages/connect/FindLawyerPage.js';
+import { LawyerProfilePage } from './pages/connect/LawyerProfilePage.js';
+import { MyConsultationsPage } from './pages/connect/MyConsultationsPage.js';
+import { LawyerRegisterPage } from './pages/connect/LawyerRegisterPage.js';
+import { LawyerDashboardPage } from './pages/connect/LawyerDashboardPage.js';
+import { AdminConnectPage } from './pages/connect/AdminConnectPage.js';
+import { AdminLawyerReviewPage } from './pages/connect/AdminLawyerReviewPage.js';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuth();
@@ -48,6 +60,7 @@ export const App: React.FC = () => {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/lawyer-login" element={<LawyerLoginPage />} />
+            <Route path="/connect/lawyer/register" element={<LawyerRegisterPage />} />
 
             {/* Protected Application Routes */}
             <Route
@@ -67,8 +80,19 @@ export const App: React.FC = () => {
               <Route path="/documents/:id/chat" element={<DocumentChatPage />} />
               <Route path="/documents/:id/completeness" element={<DocumentCompletenessPage />} />
               <Route path="/documents/:id/obligations" element={<DocumentObligationsPage />} />
+              <Route path="/documents/:id/compliance" element={<DocumentCompliancePage />} />
+              <Route path="/documents/:id/compare" element={<DocumentComparePage />} />
+              <Route path="/evaluation" element={<EvaluationPage />} />
               <Route path="/document-generator" element={<DocumentGeneratorPage />} />
               <Route path="/profile" element={<ProfilePage />} />
+
+              {/* Legal Buddy Connect (server enforces roles on every endpoint; these guards are UX only) */}
+              <Route path="/connect/find" element={<FindLawyerPage />} />
+              <Route path="/connect/lawyers/:id" element={<LawyerProfilePage />} />
+              <Route path="/connect/consultations" element={<RequireRole roles={['USER']}><MyConsultationsPage /></RequireRole>} />
+              <Route path="/connect/lawyer" element={<RequireRole roles={['LAWYER']}><LawyerDashboardPage /></RequireRole>} />
+              <Route path="/connect/admin" element={<RequireRole roles={['ADMIN']}><AdminConnectPage /></RequireRole>} />
+              <Route path="/connect/admin/lawyers/:id" element={<RequireRole roles={['ADMIN']}><AdminLawyerReviewPage /></RequireRole>} />
             </Route>
 
             {/* Catch-all route */}

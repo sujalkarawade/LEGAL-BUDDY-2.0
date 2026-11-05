@@ -2,6 +2,9 @@ import { Router } from 'express';
 import { DocumentController } from '../controllers/document.controller.js';
 import { authenticateToken, requireDocumentOwnership } from '../middleware/auth.js';
 import { uploadMiddleware } from '../middleware/upload.js';
+import { LawyerController } from '../controllers/lawyer.controller.js';
+import { InsightsController } from '../controllers/insights.controller.js';
+import { rateLimit } from '../middleware/rate-limit.js';
 
 const router = Router();
 
@@ -35,6 +38,19 @@ router.patch('/:id/completeness/:checkId', authenticateToken, requireDocumentOwn
 // Obligations
 router.get('/:id/obligations', authenticateToken, requireDocumentOwnership, DocumentController.getObligations);
 router.patch('/:id/obligations/:obligationId', authenticateToken, requireDocumentOwnership, DocumentController.updateObligationStatus);
+
+// Legal Buddy Connect: practice-area suggestions from stored clause categories only (no contract text)
+router.get('/:id/lawyer-match', authenticateToken, requireDocumentOwnership, LawyerController.matchForDocument);
+router.get('/:id/lawyer-reviews', authenticateToken, requireDocumentOwnership, InsightsController.lawyerReviews);
+
+// Insights: Indian-law checks + risk score, template comparison, translation, reminders & calendar
+router.get('/:id/insights', authenticateToken, requireDocumentOwnership, InsightsController.insights);
+router.get('/:id/compare', authenticateToken, requireDocumentOwnership, InsightsController.compare);
+router.post('/:id/translate', authenticateToken, rateLimit({ name: 'translate', windowMs: 60 * 60 * 1000, max: 60 }), requireDocumentOwnership, InsightsController.translate);
+router.get('/:id/obligations/calendar.ics', authenticateToken, requireDocumentOwnership, InsightsController.calendar);
+router.get('/:id/obligations/reminders', authenticateToken, requireDocumentOwnership, InsightsController.listReminders);
+router.put('/:id/obligations/:obligationId/reminder', authenticateToken, requireDocumentOwnership, InsightsController.setReminder);
+router.delete('/:id/obligations/:obligationId/reminder', authenticateToken, requireDocumentOwnership, InsightsController.deleteReminder);
 
 // Chatbot
 router.get('/:id/chat', authenticateToken, requireDocumentOwnership, DocumentController.getChat);

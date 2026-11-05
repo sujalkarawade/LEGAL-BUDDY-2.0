@@ -1,0 +1,110 @@
+{
+  "notice": "Synthetic, hand-labelled contract excerpts written for this benchmark. They are NOT real contracts. Labels record what a careful human reviewer would mark; they were written before running the engine and must not be edited to match its output. Results measure Legal Buddy's rule engine on this small set only and do not establish accuracy on real-world contracts.",
+  "labelGuide": {
+    "clauses": "Every clause category a reviewer would expect Legal Buddy to identify in the text (Payment, Termination, Confidentiality, Liability, Intellectual Property, Governing Law, Dispute Resolution, Renewal, Penalties).",
+    "risk": "Reviewer's risk level for that clause: Low, Medium, High or Needs Review.",
+    "compliance": "Indian-law rule ids a reviewer would flag (see src/services/insights/indian-law-checks.ts)."
+  },
+  "cases": [
+    {
+      "id": "msa-uncapped-liability",
+      "text": "---PAGE_1---\nMASTER SERVICES AGREEMENT\nThis Master Services Agreement is entered into on 1 April 2026 between Alpha Retail Pvt Ltd (Client) and Beta Systems LLP (Service Provider). Stamp duty has been paid on e-stamp paper.\n1. PAYMENT TERMS\nPayment terms: Client shall pay all undisputed invoices within 30 days of receipt.\n2. LIMITATION OF LIABILITY\nLimitation of liability: in no event shall the Service Provider's liability be limited, and the Service Provider shall indemnify the Client for all losses without any cap.\n---PAGE_2---\n3. TERM AND TERMINATION\nTerm and termination: either party may terminate this Agreement by giving 30 days written notice; either party may terminate for material breach not cured within 15 days.\n4. GOVERNING LAW\nGoverning law: This Agreement shall be governed by the laws of India and the courts in Mumbai shall have exclusive jurisdiction.",
+      "clauses": [
+        { "category": "Payment", "risk": "Low" },
+        { "category": "Liability", "risk": "High" },
+        { "category": "Termination", "risk": "Medium" },
+        { "category": "Governing Law", "risk": "Low" }
+      ],
+      "compliance": []
+    },
+    {
+      "id": "employment-noncompete",
+      "text": "---PAGE_1---\nEMPLOYMENT AGREEMENT\nThis employment agreement is made on 10 June 2026 between Gamma Tech Pvt Ltd (Employer) and Ms. R. Sharma (Employee).\nCompensation: The Employer shall pay a monthly salary of INR 85,000 within 7 days of the end of each month.\nNon-compete: The Employee shall not engage in or be employed by any competing business in India for a period of two (2) years after the termination of employment.\nConfidential information: The Employee shall hold all confidential information in strict confidence and protect it with reasonable care during and after employment.\nTermination: Either party may terminate employment by giving 60 days written notice.\nThis agreement is governed by the laws of India and the courts at Pune have jurisdiction.",
+      "clauses": [
+        { "category": "Payment", "risk": "Low" },
+        { "category": "Confidentiality", "risk": "Low" },
+        { "category": "Termination", "risk": "Medium" },
+        { "category": "Governing Law", "risk": "Low" }
+      ],
+      "compliance": ["ICA_S27_RESTRAINT_OF_TRADE", "STAMP_DUTY"]
+    },
+    {
+      "id": "vendor-penalty-arbitration",
+      "text": "---PAGE_1---\nSUPPLY AGREEMENT\nThis supply agreement dated 5 May 2026 is between Delta Foods Pvt Ltd (Buyer) and Epsilon Packaging (Supplier). The agreement is executed on stamp paper of the appropriate value.\nLiquidated damages: If delivery is delayed, the Supplier shall pay liquidated damages in the amount of 2% of the order value per week of delay.\nPayment terms: The Buyer shall pay within 45 days of invoice.\nDispute resolution: All disputes shall be referred to arbitration by a sole arbitrator under the Arbitration and Conciliation Act, 1996, after good faith negotiations fail.\nGoverning law: the laws of India shall apply and courts in Nagpur shall have jurisdiction.",
+      "clauses": [
+        { "category": "Penalties", "risk": "Needs Review" },
+        { "category": "Payment", "risk": "Low" },
+        { "category": "Dispute Resolution", "risk": "Low" },
+        { "category": "Governing Law", "risk": "Low" }
+      ],
+      "compliance": ["ICA_S74_PENALTY", "ACA_ARBITRATION_SEAT"]
+    },
+    {
+      "id": "nda-perpetual",
+      "text": "---PAGE_1---\nMUTUAL NON-DISCLOSURE AGREEMENT\nThis non-disclosure agreement is entered into on 2 July 2026 between Zeta Labs Pvt Ltd and Eta Analytics LLP. E-stamp certificate number IN-MH-000000 is attached.\nConfidential information: each party shall hold the other party's confidential information in strict confidence, protect it with the same degree of care it uses for its own information, and this obligation shall survive indefinitely.\nGoverning law: This Agreement is governed by the laws of India and the courts at Bengaluru have exclusive jurisdiction.",
+      "clauses": [
+        { "category": "Confidentiality", "risk": "Medium" },
+        { "category": "Governing Law", "risk": "Low" }
+      ],
+      "compliance": []
+    },
+    {
+      "id": "saas-personal-data",
+      "text": "---PAGE_1---\nSOFTWARE LICENSE AGREEMENT\nThis SaaS agreement is made on 1 August 2026 between Theta Cloud Pvt Ltd (Provider) and Iota Clinics (Customer). Stamp duty paid under the Maharashtra Stamp Act.\nThe Provider will store patient personal data and customer data uploaded by the Customer on its servers.\nFees and expenses: The Customer shall pay the annual subscription fee within 30 days of invoice.\nIntellectual property: All intellectual property in the platform shall belong to the Provider, and the Provider retains all rights in pre-existing tools.\nAutomatic renewal: This agreement shall automatically renew for successive one-year terms unless written notice is given 60 days prior to expiration.\nGoverning law: laws of India; courts at Mumbai.",
+      "clauses": [
+        { "category": "Payment", "risk": "Low" },
+        { "category": "Intellectual Property", "risk": "Low" },
+        { "category": "Renewal", "risk": "Medium" },
+        { "category": "Governing Law", "risk": "Low" }
+      ],
+      "compliance": ["DPDP_PERSONAL_DATA"]
+    },
+    {
+      "id": "consulting-claims-bar",
+      "text": "---PAGE_1---\nCONSULTING AGREEMENT\nThis consulting agreement dated 3 March 2026 is between Kappa Advisors and Lambda Infra Pvt Ltd, executed on non-judicial stamp paper.\nPayment terms: Lambda shall pay the consultant's fee within 15 days of each invoice.\nClaims: Any claim arising out of this Agreement must be brought within 3 months of the event giving rise to it, failing which the claim shall stand waived.\nThe Consultant waives the right to sue the Client in any court for any matter relating to this Agreement.\nTermination for convenience: Lambda may terminate immediately without notice at its sole discretion.",
+      "clauses": [
+        { "category": "Payment", "risk": "Low" },
+        { "category": "Termination", "risk": "High" }
+      ],
+      "compliance": ["ICA_S28_RESTRAINT_OF_PROCEEDINGS", "GOVERNING_LAW_MISSING"]
+    },
+    {
+      "id": "lease-basic",
+      "text": "---PAGE_1---\nLEAVE AND LICENSE AGREEMENT\nThis leave and license agreement is made on 1 September 2026 between Mr. A. Patil (Licensor) and Mr. S. Khan (Licensee) for Flat 12, Kothrud, Pune.\nThe Licensee shall pay a monthly license fee of Rs. 25,000 on or before the 5th day of each month.\nThe license is for 11 months and may be renewed by mutual written agreement.\nEither party may terminate this agreement by giving one month's written notice.",
+      "clauses": [
+        { "category": "Payment", "risk": "Low" },
+        { "category": "Renewal", "risk": "Low" },
+        { "category": "Termination", "risk": "Medium" }
+      ],
+      "compliance": ["STAMP_DUTY", "GOVERNING_LAW_MISSING"]
+    },
+    {
+      "id": "msa-capped",
+      "text": "---PAGE_1---\nSERVICES AGREEMENT\nThis services agreement dated 15 January 2026 is between Mu Logistics Pvt Ltd and Nu Software LLP and is duly stamped.\nLimitation of liability: in no event shall either party's aggregate liability exceed and it is capped at the total fees paid in the preceding twelve months.\nIntellectual property: Upon full payment, the Service Provider assigns all right, title, and interest in the deliverables to the Client.\nPayment terms: The Client shall pay invoices within 30 days.\nArbitration: Disputes shall be resolved by arbitration; the seat of arbitration shall be Mumbai and the arbitral tribunal shall consist of a sole arbitrator.\nGoverning law: laws of India.",
+      "clauses": [
+        { "category": "Liability", "risk": "Low" },
+        { "category": "Intellectual Property", "risk": "Medium" },
+        { "category": "Payment", "risk": "Low" },
+        { "category": "Dispute Resolution", "risk": "Low" },
+        { "category": "Governing Law", "risk": "Low" }
+      ],
+      "compliance": []
+    },
+    {
+      "id": "agency-late-fee",
+      "text": "---PAGE_1---\nAGENCY AGREEMENT\nThis agency agreement dated 20 February 2026 between Xi Distributors and Omicron Brands Pvt Ltd is executed on e-stamp paper.\nInvoicing: The Distributor shall pay each invoice within 30 days; overdue amounts shall carry interest at 2% per month together with collection fees and attorney fees.\nLate fee: a late fee of Rs. 5,000 shall pay for each delayed monthly report.\nThe Agreement shall be governed by the laws of India and courts at Delhi have jurisdiction.",
+      "clauses": [
+        { "category": "Payment", "risk": "Medium" },
+        { "category": "Penalties", "risk": "Needs Review" },
+        { "category": "Governing Law", "risk": "Low" }
+      ],
+      "compliance": ["ICA_S74_PENALTY"]
+    },
+    {
+      "id": "short-letter-no-clauses",
+      "text": "---PAGE_1---\nLETTER OF INTENT\nThis letter records that Pi Ventures and Rho Foods intend to discuss a possible partnership. It does not create binding obligations and is not a contract. The parties will meet next month to discuss next steps.",
+      "clauses": [],
+      "compliance": ["STAMP_DUTY", "GOVERNING_LAW_MISSING"]
+    }
+  ]
+}

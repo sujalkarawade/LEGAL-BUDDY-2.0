@@ -91,3 +91,33 @@ if (!fs.existsSync(GENERATED_DIR)) {
 }
 
 export const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+
+// ---------------------------------------------------------------------------
+// Legal Buddy Connect
+// ---------------------------------------------------------------------------
+
+/**
+ * Private storage for lawyer credentials and profile photos. Deliberately OUTSIDE
+ * UPLOAD_DIR so `npm run clean:uploads` never deletes verification evidence, and
+ * never exposed through express.static.
+ */
+export const CONNECT_PRIVATE_DIR = path.resolve(process.cwd(), process.env.CONNECT_PRIVATE_DIR || './private_uploads/connect');
+export const CONNECT_CREDENTIAL_MAX_MB = integerSetting('CONNECT_CREDENTIAL_MAX_MB', 5, 1, 20);
+export const CONNECT_PHOTO_MAX_MB = integerSetting('CONNECT_PHOTO_MAX_MB', 2, 1, 10);
+for (const sub of ['credentials', 'photos']) {
+  fs.mkdirSync(path.join(CONNECT_PRIVATE_DIR, sub), { recursive: true });
+}
+
+/**
+ * Geocoding goes through the backend only (never from the browser). The default is the
+ * public OSM Nominatim instance, which is suitable for development/demo only:
+ * https://operations.osmfoundation.org/policies/nominatim/ (max 1 request/second for the
+ * whole application, identifying User-Agent, caching required, no autocomplete).
+ * Point GEOCODER_URL at a self-hosted Nominatim or another compatible provider for production.
+ */
+export const GEOCODER_ENABLED = booleanSetting('GEOCODER_ENABLED', true);
+export const GEOCODER_URL = (process.env.GEOCODER_URL || 'https://nominatim.openstreetmap.org').replace(/\/+$/, '');
+export const GEOCODER_USER_AGENT = process.env.GEOCODER_USER_AGENT || '';
+export const GEOCODER_COUNTRY_CODES = process.env.GEOCODER_COUNTRY_CODES || 'in';
+export const GEOCODER_MIN_INTERVAL_MS = integerSetting('GEOCODER_MIN_INTERVAL_MS', 1100, 0, 60000);
+export const GEOCODER_TIMEOUT_MS = integerSetting('GEOCODER_TIMEOUT_MS', 8000, 500, 30000);

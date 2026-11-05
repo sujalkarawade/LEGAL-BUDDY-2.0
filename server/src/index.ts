@@ -7,6 +7,10 @@ import authRoutes from './routes/auth.routes.js';
 import documentRoutes from './routes/document.routes.js';
 import templateRoutes from './routes/template.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
+import { lawyerRoutes, lawyerPortalRoutes, consultationRoutes, adminConnectRoutes, notificationRoutes, geoRoutes } from './routes/connect.routes.js';
+import { EvaluationController } from './controllers/evaluation.controller.js';
+import { authenticateToken } from './middleware/auth.js';
+import { startReminderScheduler } from './services/insights/reminder.service.js';
 import { PaddleOcrService } from './services/ocr/paddle-ocr.service.js';
 import { LocalEmbeddingService } from './services/local-embedding.service.js';
 import { loggerService } from './services/logger.service.js';
@@ -56,6 +60,17 @@ app.use('/api/documents', documentRoutes);
 app.use('/api', templateRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
+// Legal Buddy Connect
+app.use('/api/lawyers', lawyerRoutes);
+app.use('/api/lawyer-portal', lawyerPortalRoutes);
+app.use('/api/consultations', consultationRoutes);
+app.use('/api/admin/connect', adminConnectRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/geo', geoRoutes);
+
+// Accuracy & Evaluation dashboard (saved evaluation results; signed-in users only)
+app.get('/api/evaluations/summary', authenticateToken, EvaluationController.summary);
+
 // Global Error Handler
 app.use(errorHandler);
 
@@ -75,6 +90,9 @@ app.listen(PORT, () => {
   // Warm up the local PaddleOCR worker in the background so the model loads
   // once at startup and the first document upload is not delayed by model load.
   PaddleOcrService.warmup();
+
+  // Obligation reminders → in-app notifications (checked hourly).
+  startReminderScheduler();
 });
 
 // Shut the OCR worker down cleanly on process exit.

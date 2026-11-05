@@ -187,6 +187,25 @@ export class AiService {
   }
 
   /**
+   * Translates an explanation Legal Buddy already generated into Hindi or Marathi.
+   * Throws when no live provider is configured (there is no offline translation model).
+   */
+  static async translateExplanation(text: string, language: 'Hindi' | 'Marathi'): Promise<{ text: string; provider: string; model: string }> {
+    const result = await this.executeCompletion([
+      {
+        role: 'system',
+        content: `You translate plain-language contract explanations into ${language} for Indian readers.
+Rules: translate faithfully and completely; do not add, remove or soften any information; do not give legal advice;
+keep numbers, dates, amounts, party names and clause numbers exactly as written; after an important legal term,
+keep the English term in brackets once, e.g. "दायित्व (liability)". Use simple everyday ${language} in Devanagari script.
+Return only the translation, with no preface or notes.`,
+      },
+      { role: 'user', content: text.slice(0, 4000) },
+    ], { temperature: 0, maxTokens: 800 });
+    return { ...result, text: result.text.trim() };
+  }
+
+  /**
    * Generates a structured executive summary using Generative AI (Groq / OpenRouter)
    */
   static async generateSummary(contractText: string, filename: string): Promise<ContractSummaryResult> {
@@ -443,12 +462,12 @@ Return ONLY valid JSON:
     documentName = 'uploaded contract'
   ): Promise<ChatAnswerResult> {
     const noKey = (): ChatAnswerResult => ({
-      answer: 'AI chat is not configured. Please add a valid GROQ_API_KEY or OPENROUTER_API_KEY to the server environment, then restart the server.',
+      answer: 'AI chat is not configured. Insufficient AI configuration: please add a valid GROQ_API_KEY or OPENROUTER_API_KEY to the server environment, then restart the server.',
       citations: [], isDocumentGrounded: false, insufficientEvidence: true,
       provider: 'no_ai_key',
     });
     const insufficient = (): ChatAnswerResult => ({
-      answer: 'I could not find enough relevant passages in this document to confidently answer your question. Try rephrasing, or ask about a specific clause, date, party, or obligation. This does not mean the information is absent from the contract.',
+      answer: 'Information was not found in the document. The retrieved evidence is insufficient to answer this question. Try rephrasing, or ask about a specific clause, date, party, or obligation. This does not mean the information is absent from the contract.',
       citations: [], isDocumentGrounded: false, insufficientEvidence: true,
       provider: 'evidence_fallback',
     });
@@ -472,24 +491,19 @@ Return ONLY valid JSON:
     ].join(' ');
 
     try {
-      // Use last 8 conversation turns for full follow-up context
-      const historyMessages: Array<{ role: 'user' | 'assistant'; content: string }> = _conversationHistory
-        .slice(-8)
-        .filter(m => m.role === 'user' || m.role === 'assistant')
-        .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
-
       const passagesPayload = chunks.map(c => ({
         chunkId: c.id,
+        documentId: c.documentId,
         documentName: c.documentName || documentName,
         pageNumber: c.pageNumber,
         text: c.content,
         extractionMethod: c.extractionMethod,
         uncertainOcr: c.lowConfidence,
+        ocrReviewFlags: c.ocrReviewFlags,
       }));
 
       const { text, provider, model } = await this.executeCompletion([
         { role: 'system', content: systemPrompt },
-        ...historyMessages,
         { role: 'user', content: JSON.stringify({ question, documentName, passages: passagesPayload }) },
       ], { jsonMode: true, temperature: 0, maxTokens: 800 });
 
@@ -498,64 +512,11 @@ Return ONLY valid JSON:
         return insufficient();
       }
 
-      // Normalize sources so whether LLM returns objects or raw strings, we handle them
-      if (!Array.isArray(parsed.sources)) {
-        parsed.sources = [];
-      } else {
-        parsed.sources = parsed.sources.map((s: any) => {
-          if (typeof s === 'string') {
-            const matched = chunks.find(c => c.content.includes(s) || c.content.toLowerCase().includes(s.toLowerCase().trim())) || chunks[0];
-            return { chunkId: matched?.id || chunks[0]?.id, excerpt: s.slice(0, 500) };
-          }
-          if (s && typeof s === 'object') {
-            let chunkId = s.chunkId;
-            const excerpt = (s.excerpt || s.text || s.quote || '').trim();
-            if (!chunkId || !chunks.some(c => c.id === chunkId)) {
-              const matched = chunks.find(c => c.content.includes(excerpt) || c.content.toLowerCase().includes(excerpt.toLowerCase())) || chunks[0];
-              chunkId = matched?.id;
-            }
-            return { chunkId, excerpt };
-          }
-          return null;
-        }).filter(Boolean);
-      }
-
       try {
         const validated = validateGroundedAnswer(JSON.stringify(parsed), chunks, documentName);
         return { ...validated, provider: `${provider} (${model})` };
       } catch (validationErr: any) {
         console.warn('[AiService] Strict citation check note:', validationErr?.message);
-        // If the LLM gave a real answer, rescue it and attach any matching citations
-        if (parsed.answer && !parsed.insufficientEvidence && parsed.answer.trim().length > 5) {
-          const verifiedCitations: any[] = [];
-          for (const s of parsed.sources) {
-            const chunk = chunks.find(c => c.id === s.chunkId) ||
-              chunks.find(c => c.content.toLowerCase().includes((s.excerpt || '').toLowerCase().trim()));
-            if (chunk && chunk.pageNumber) {
-              const verifiedExcerpt = chunk.content.includes(s.excerpt)
-                ? s.excerpt
-                : (chunk.content.length > 200 ? chunk.content.slice(0, 200) + '...' : chunk.content);
-              verifiedCitations.push({
-                chunkId: chunk.id,
-                documentId: chunk.documentId,
-                excerpt: verifiedExcerpt,
-                pageNumber: chunk.pageNumber,
-                documentName: chunk.documentName || documentName,
-                score: chunk.score || 0,
-                extractionMethod: chunk.extractionMethod,
-                lowConfidence: chunk.lowConfidence,
-                verified: true,
-              });
-            }
-          }
-          return {
-            answer: parsed.answer,
-            citations: verifiedCitations,
-            isDocumentGrounded: verifiedCitations.length > 0,
-            insufficientEvidence: false,
-            provider: `${provider} (${model})`,
-          };
-        }
         return insufficient();
       }
     } catch (err: any) {

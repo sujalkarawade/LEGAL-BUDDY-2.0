@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import {
   SearchCode,
   AlertTriangle,
@@ -12,6 +12,11 @@ import {
 import ApiService from '../services/api.js';
 import { DocumentRecord, ClauseFinding } from '../types/index.js';
 import { DocumentNavHeader } from '../components/document/DocumentNavHeader.js';
+import { LawyerMatchPanel } from '../components/connect/LawyerMatchPanel.js';
+import { TranslateSpeak } from '../components/insights/TranslateSpeak.js';
+import { VerdictBadge } from '../components/insights/ClauseReviewPanel.js';
+import { InsightsApi } from '../services/insightsApi.js';
+import type { DocumentLawyerComment } from '../types/insights.js';
 
 export const DocumentClausesPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -41,6 +46,16 @@ export const DocumentClausesPage: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, [id, categoryFilter, riskFilter]);
+
+  const [lawyerComments, setLawyerComments] = useState<Record<string, DocumentLawyerComment[]>>({});
+  useEffect(() => {
+    if (!id) return;
+    InsightsApi.documentLawyerReviews(id).then(r => {
+      const grouped: Record<string, DocumentLawyerComment[]> = {};
+      for (const c of r.comments) (grouped[c.clauseFindingId] ||= []).push(c);
+      setLawyerComments(grouped);
+    }).catch(() => undefined);
+  }, [id]);
 
   const handleStatusUpdate = async (clauseId: string, newStatus: string) => {
     if (!id) return;
@@ -106,6 +121,9 @@ export const DocumentClausesPage: React.FC = () => {
   return (
     <div style={{ width: '100%', margin: '0' }} className="animate-fade-in">
       <DocumentNavHeader document={document} />
+
+      {/* Legal Buddy Connect: practice-area suggestions (opt-in; uses clause categories only) */}
+      {id && !isLoading && <LawyerMatchPanel documentId={id} />}
 
       {/* Filter and Overview Card */}
       <div className="card" style={{ marginBottom: '20px' }}>
@@ -342,6 +360,36 @@ export const DocumentClausesPage: React.FC = () => {
                       {clause.reviewQuestion}
                     </p>
                   </div>
+                </div>
+              )}
+
+              {/* Lawyer feedback from Legal Buddy Connect (only from the user's own consultations) */}
+              {(lawyerComments[clause.id] || []).length > 0 && (
+                <div className="lb-clause-feedback">
+                  <span className="section-label">Lawyer feedback</span>
+                  {lawyerComments[clause.id].map(c => (
+                    <div key={c.id} className="lb-review-comment" data-role={c.authorRole}>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <strong style={{ fontSize: '0.8125rem' }}>{c.authorRole === 'LAWYER' ? c.lawyer.professionalName : 'You'}</strong>
+                        {c.authorRole === 'LAWYER' && <VerdictBadge verdict={c.verdict} />}
+                      </div>
+                      <p style={{ whiteSpace: 'pre-line', color: 'var(--text-primary)', marginTop: 4, fontSize: '0.875rem' }}>{c.comment}</p>
+                      {c.suggestedText && <div className="lb-suggested"><span className="section-label">Suggested wording</span><p style={{ whiteSpace: 'pre-line' }}>{c.suggestedText}</p></div>}
+                    </div>
+                  ))}
+                  <Link to="/connect/consultations" style={{ fontSize: '0.8125rem', color: 'var(--info)' }}>Reply in My Consultations</Link>
+                </div>
+              )}
+
+              {/* Read aloud / Hindi / Marathi explanation */}
+              {id && (
+                <div style={{ marginTop: 12 }}>
+                  <TranslateSpeak
+                    documentId={id}
+                    kind="clause"
+                    clauseId={clause.id}
+                    englishText={[`${clause.title}.`, clause.plainLanguageExplanation, clause.potentialConcern ? `Possible concern: ${clause.potentialConcern}` : '', clause.reviewQuestion ? `Question to ask: ${clause.reviewQuestion}` : ''].filter(Boolean).join('\n')}
+                  />
                 </div>
               )}
             </div>

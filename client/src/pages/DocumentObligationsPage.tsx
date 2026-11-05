@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { CalendarClock, Clock, Calendar, Check, X, Filter } from 'lucide-react';
+import { CalendarClock, Clock, Calendar, Check, X, Filter, CalendarPlus } from 'lucide-react';
 import ApiService from '../services/api.js';
+import { InsightsApi } from '../services/insightsApi.js';
+import { ReminderControl } from '../components/insights/ReminderControl.js';
+import type { ObligationReminder } from '../types/insights.js';
 import { DocumentRecord, ExtractedObligation } from '../types/index.js';
 import { DocumentNavHeader } from '../components/document/DocumentNavHeader.js';
 
@@ -27,6 +30,30 @@ export const DocumentObligationsPage: React.FC = () => {
   };
 
   useEffect(() => { fetchData(); }, [id]);
+
+  // Obligation reminders and calendar export
+  const [reminders, setReminders] = useState<Record<string, ObligationReminder>>({});
+  const [calendarNote, setCalendarNote] = useState<string | null>(null);
+  useEffect(() => {
+    if (!id) return;
+    InsightsApi.reminders(id).then(r => setReminders(Object.fromEntries(r.reminders.map(x => [x.obligationId, x])))).catch(() => undefined);
+  }, [id]);
+  const updateReminder = (obligationId: string, reminder: ObligationReminder | null) => setReminders(prev => {
+    const next = { ...prev };
+    if (reminder) next[obligationId] = reminder; else delete next[obligationId];
+    return next;
+  });
+  const downloadCalendar = async () => {
+    if (!id) return;
+    try {
+      const count = await InsightsApi.downloadCalendar(id);
+      setCalendarNote(count
+        ? `Downloaded ${count} calendar ${count === 1 ? 'event' : 'events'}. Open the .ics file to add them to Google Calendar, Outlook or your phone.`
+        : 'No obligation in this contract has an exact calendar date yet. Set "Remind me" dates and download again.');
+    } catch (e: any) {
+      setCalendarNote(e.message);
+    }
+  };
 
   const handleUpdateStatus = async (obId: string, newStatus: string) => {
     if (!id) return;
@@ -57,8 +84,14 @@ export const DocumentObligationsPage: React.FC = () => {
               Deadlines, notice windows, covenants, and party assignments
             </p>
           </div>
-          <span className="badge badge-default">{obligations.length} identified</span>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <span className="badge badge-default">{obligations.length} identified</span>
+            <button type="button" className="btn btn-sm btn-secondary" onClick={downloadCalendar} title="Calendar file with dated obligations and your reminders">
+              <CalendarPlus size={13} /> Add to calendar (.ics)
+            </button>
+          </div>
         </div>
+        {calendarNote && <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: 10 }}>{calendarNote}</p>}
 
         {/* Filters */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
@@ -155,6 +188,9 @@ export const DocumentObligationsPage: React.FC = () => {
                     "{ob.excerpt.slice(0, 160)}{ob.excerpt.length > 160 ? '…' : ''}"
                   </div>
                 )}
+
+                {/* Reminder (in-app notification + calendar export) */}
+                {id && <ReminderControl documentId={id} obligationId={ob.id} reminder={reminders[ob.id]} onChange={updateReminder} />}
 
                 {/* Actions */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '4px' }}>

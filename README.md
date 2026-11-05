@@ -62,8 +62,12 @@
 - Session token generation with `jsonwebtoken` (JWT).
 - Tenant isolation: Document ownership verification ensures User A cannot access User B's contracts or analysis.
 
-### 9. 💼 Lawyer Portal Placeholder (Phase 2 Preview)
-- Dedicated entry point at `/lawyer-login` explaining the forthcoming Phase 2 attorney workspace (redlining, statutory compliance, bar verification).
+### 9. 🗺️ Legal Buddy Connect — Lawyer Discovery & Consultations
+- **Find a Lawyer** map + list (Leaflet/OpenStreetMap) with consent-first location, city/PIN search, radius, specialization, experience, language, mode and availability filters.
+- Lawyer self-registration, private credential upload, and **manual admin verification** with a full audit log.
+- Consultation requests with accept / reject / propose-time / confirm / cancel, consent-based document sharing, and in-app notifications.
+- Practice-area suggestions on Clause Analysis derived from stored clause categories only (no contract text leaves the analysis).
+- Setup, configuration, security model and test commands: [docs/legal-buddy-connect/README.md](docs/legal-buddy-connect/README.md).
 
 ---
 

@@ -7,6 +7,10 @@ import {
 import ApiService from '../services/api.js';
 import { DocumentRecord, ContractSummary } from '../types/index.js';
 import { DocumentNavHeader } from '../components/document/DocumentNavHeader.js';
+import { InsightsApi } from '../services/insightsApi.js';
+import { RiskScoreCard } from '../components/insights/RiskScoreCard.js';
+import { TranslateSpeak } from '../components/insights/TranslateSpeak.js';
+import type { RiskScore } from '../types/insights.js';
 
 export const DocumentSummaryPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -33,6 +37,11 @@ export const DocumentSummaryPage: React.FC = () => {
   };
 
   useEffect(() => { fetchData(); }, [id]);
+
+  const [risk, setRisk] = useState<RiskScore | null>(null);
+  useEffect(() => {
+    if (id) InsightsApi.insights(id).then(r => setRisk(r.riskScore)).catch(() => setRisk(null));
+  }, [id]);
 
   const handleReanalyze = async () => {
     if (!id) return;
@@ -98,6 +107,9 @@ export const DocumentSummaryPage: React.FC = () => {
   return (
     <div style={{ width: '100%', margin: '0' }} className="animate-fade-in">
       <DocumentNavHeader document={document} />
+
+      {/* Overall risk indicator (rule-based, fully explained) */}
+      {risk && id && <div style={{ marginBottom: 16 }}><RiskScoreCard risk={risk} documentId={id} compact /></div>}
 
       {/* Overview card */}
       <div className="card" style={{ marginBottom: '16px' }}>
@@ -165,6 +177,21 @@ export const DocumentSummaryPage: React.FC = () => {
                 <p key={i} style={{ fontSize: '0.875rem', color: 'var(--text-primary)', lineHeight: 1.7 }}>{para}</p>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Read aloud / Hindi / Marathi */}
+        {id && (
+          <div style={{ marginTop: 14 }}>
+            <TranslateSpeak
+              documentId={id}
+              kind="summary"
+              englishText={[
+                `Contract type: ${summary.contractType}.`, `Parties: ${summary.parties}.`, `Purpose: ${summary.purpose}`,
+                summary.paymentTerms ? `Payment: ${summary.paymentTerms}` : '', summary.terminationConditions ? `Termination: ${summary.terminationConditions}` : '',
+                summary.liabilityTerms ? `Liability: ${summary.liabilityTerms}` : '', summary.missingInfo ? `Missing or unclear: ${summary.missingInfo}` : '',
+              ].filter(Boolean).join('\n')}
+            />
           </div>
         )}
       </div>

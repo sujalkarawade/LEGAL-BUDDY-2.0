@@ -12,8 +12,15 @@ import {
   UserCheck,
   Scale,
   Briefcase,
+  MapPin,
+  CalendarCheck,
+  ShieldCheck,
+  Landmark,
+  GitCompare,
+  BarChart3,
 } from 'lucide-react';
 import ApiService from '../../services/api.js';
+import { useAuth } from '../../context/AuthContext.js';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -30,16 +37,30 @@ const DOC_ITEMS = [
   { name: 'Ask Legal Buddy',       key: 'chat',         icon: MessageSquareQuote },
   { name: 'Completeness Check',    key: 'completeness', icon: CheckCircle2 },
   { name: 'Dates & Obligations',   key: 'obligations',  icon: CalendarClock },
+  { name: 'Indian Law Checks',     key: 'compliance',   icon: Landmark },
+  { name: 'Compare Template',      key: 'compare',      icon: GitCompare },
 ];
 
-const BOTTOM_ITEMS = [
-  { name: 'Document Generator', path: '/document-generator', icon: FileCode2 },
-  { name: 'Lawyer Portal',      path: '/lawyer-login',       icon: Briefcase },
-  { name: 'Profile',            path: '/profile',            icon: UserCheck },
-];
+/** Legal Buddy Connect entries depend on the signed-in role (the server enforces the same roles). */
+function bottomItems(role: string | undefined) {
+  return [
+    { name: 'Document Generator', path: '/document-generator', icon: FileCode2 },
+    { name: 'Find a Lawyer', path: '/connect/find', icon: MapPin },
+    { name: 'Accuracy & Evaluation', path: '/evaluation', icon: BarChart3 },
+    ...(role === 'USER' ? [
+      { name: 'My Consultations', path: '/connect/consultations', icon: CalendarCheck },
+      { name: 'Lawyer Portal', path: '/lawyer-login', icon: Briefcase },
+    ] : []),
+    ...(role === 'LAWYER' ? [{ name: 'Lawyer Dashboard', path: '/connect/lawyer', icon: Briefcase }] : []),
+    ...(role === 'ADMIN' ? [{ name: 'Connect Admin', path: '/connect/admin', icon: ShieldCheck }] : []),
+    { name: 'Profile', path: '/profile', icon: UserCheck },
+  ];
+}
 
 export const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
   const location = useLocation();
+  const { user } = useAuth();
+  const BOTTOM_ITEMS = bottomItems(user?.role);
   const [hasDocuments, setHasDocuments] = useState<boolean>(false);
   const [latestDocId, setLatestDocId] = useState<string | null>(null);
   const [hoveredTooltip, setHoveredTooltip] = useState<{ name: string; top: number } | null>(null);
@@ -270,7 +291,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
 
         {BOTTOM_ITEMS.map((item) => {
           const Icon = item.icon;
-          const active = location.pathname.startsWith(item.path);
+          const active = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
 
           return (
             <div

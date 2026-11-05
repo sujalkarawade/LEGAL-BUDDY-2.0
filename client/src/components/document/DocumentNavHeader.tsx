@@ -10,6 +10,8 @@ import {
   Download,
   ArrowLeft,
   ScanText,
+  Landmark,
+  GitCompare,
 } from 'lucide-react';
 import { DocumentRecord } from '../../types/index.js';
 
@@ -29,6 +31,8 @@ export const DocumentNavHeader: React.FC<DocumentNavHeaderProps> = ({ document }
     { name: 'Ask Legal Buddy',     path: `/documents/${id}/chat`,         icon: MessageSquareQuote },
     { name: 'Completeness',        path: `/documents/${id}/completeness`, icon: CheckCircle2 },
     { name: 'Obligations',         path: `/documents/${id}/obligations`,  icon: CalendarClock },
+    { name: 'Indian Law Checks',   path: `/documents/${id}/compliance`,   icon: Landmark },
+    { name: 'Compare',             path: `/documents/${id}/compare`,      icon: GitCompare },
   ];
 
   const ocrLabel =

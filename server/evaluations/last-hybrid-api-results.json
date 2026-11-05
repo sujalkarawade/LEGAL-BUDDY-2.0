@@ -1,5 +1,5 @@
 {
-  "executedAt": "2026-10-25T05:40:00.795Z",
+  "executedAt": "2026-11-05T16:02:57.082Z",
   "mode": "controlled synthetic answer; real PostgreSQL, HTTP, PDF/OCR, keyword retrieval; no external calls",
   "passedTests": 22,
   "totalTests": 22,
@@ -85,7 +85,7 @@
       "passed": true
     },
     {
-      "name": "Download Valid Microsoft Word DOCX Document (9205 bytes)",
+      "name": "Download Valid Microsoft Word DOCX Document (9204 bytes)",
       "passed": true
     },
     {

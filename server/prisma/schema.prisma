@@ -12,13 +12,21 @@ model User {
   email          String              @unique
   passwordHash   String
   name           String
-  role           String              @default("USER") // USER, LAWYER
+  role           String              @default("USER") // USER, LAWYER, ADMIN (ADMIN is granted only by scripts/promote-admin.ts)
   organization   String?             @default("Independent")
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
   documents      Document[]
   conversations  ChatConversation[]
   generatedDocs  GeneratedDocument[]
+  // Legal Buddy Connect
+  lawyerProfile  LawyerProfile?
+  consultations  ConsultationRequest[]
+  notifications  Notification[]
+  lawyerReports  LawyerReport[]
+  adminAuditLogs AdminAuditLog[]
+  clauseReviewComments ClauseReviewComment[]
+  obligationReminders  ObligationReminder[]
 
   @@map("users")
 }
@@ -48,6 +56,7 @@ model Document {
   clauses            ClauseFinding[]
   completenessChecks CompletenessCheck[]
   obligations        ExtractedObligation[]
+  consultationShares ConsultationRequest[]
   conversations      ChatConversation[]
 
   @@index([userId])
@@ -110,6 +119,7 @@ model ClauseFinding {
   reviewQuestion           String?  @db.Text
   reviewStatus             String   @default("PENDING") // PENDING, APPROVED, FLAGGED
   createdAt                DateTime @default(now())
+  reviewComments           ClauseReviewComment[]
 
   @@index([documentId])
   @@index([category])
@@ -149,6 +159,7 @@ model ExtractedObligation {
   confidence       String   @default("HIGH") // HIGH, MEDIUM, LOW
   reviewStatus     String   @default("UNREVIEWED") // UNREVIEWED, ACKNOWLEDGED, DISMISSED
   createdAt        DateTime @default(now())
+  reminders        ObligationReminder[]
 
   @@index([documentId])
   @@index([category])
@@ -210,4 +221,256 @@ model GeneratedDocument {
 
   @@index([userId])
   @@map("generated_documents")
+}
+
+// -----------------------------------------------------------------------------
+// LEGAL BUDDY CONNECT - lawyer discovery and consultation
+// Status fields are strings (matching the rest of this schema) and are validated
+// by the zod constants in src/services/connect/constants.ts.
+// -----------------------------------------------------------------------------
+
+model LawyerProfile {
+  id                         String                 @id @default(uuid())
+  userId                     String                 @unique
+  user                       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  professionalName           String
+  professionalTitle          String?
+  bio                        String?                @db.Text
+  photoStoredName            String?
+  photoMimeType              String?
+  practiceStartYear          Int?
+  languages                  String[]               @default([])
+  education                  String?                @db.Text
+  barCouncilState            String
+  enrollmentNumber           String
+  enrollmentNumberNormalized String
+  enrollmentDate             DateTime?
+  status                     String                 @default("DRAFT") // DRAFT, PENDING_REVIEW, INFO_REQUESTED, VERIFIED, REJECTED, SUSPENDED, LISTED (external listings only)
+  statusReason               String?                @db.Text // latest admin reason shown to the lawyer
+  source                     String                 @default("LEGAL_BUDDY") // LEGAL_BUDDY, EXTERNAL_DIRECTORY
+  isSynthetic                Boolean                @default(false) // true only for clearly labelled demo records
+  offersInPerson             Boolean                @default(true)
+  offersOnline               Boolean                @default(false)
+  acceptingRequests          Boolean                @default(true)
+  feeDisclosed               Boolean                @default(false)
+  consultationFeeInr         Int?
+  contactPhone               String?
+  publishPhone               Boolean                @default(false)
+  contactEmail               String?
+  publishEmail               Boolean                @default(false)
+  submittedAt                DateTime?
+  verifiedAt                 DateTime?
+  verifiedById               String?
+  createdAt                  DateTime               @default(now())
+  updatedAt                  DateTime               @updatedAt
+  offices                    LawyerOffice[]
+  specializations            LawyerSpecialization[]
+  availability               LawyerAvailability[]
+  credentials                LawyerCredential[]
+  consultations              ConsultationRequest[]
+  reports                    LawyerReport[]
+
+  @@unique([barCouncilState, enrollmentNumberNormalized], map: "lawyer_profiles_enrollment_key")
+  @@index([status, source])
+  @@map("lawyer_profiles")
+}
+
+model LawyerOffice {
+  id              String        @id @default(uuid())
+  lawyerProfileId String
+  lawyerProfile   LawyerProfile @relation(fields: [lawyerProfileId], references: [id], onDelete: Cascade)
+  officeName      String?
+  addressLine     String
+  locality        String?
+  city            String
+  state           String
+  postalCode      String
+  latitude        Float
+  longitude       Float
+  isPrimary       Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([lawyerProfileId])
+  @@index([latitude, longitude])
+  @@map("lawyer_offices")
+}
+
+model Specialization {
+  id        String                 @id @default(uuid())
+  slug      String                 @unique
+  name      String
+  isActive  Boolean                @default(true)
+  sortOrder Int                    @default(100)
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+  lawyers   LawyerSpecialization[]
+  requests  ConsultationRequest[]
+
+  @@map("specializations")
+}
+
+model LawyerSpecialization {
+  lawyerProfileId  String
+  lawyerProfile    LawyerProfile  @relation(fields: [lawyerProfileId], references: [id], onDelete: Cascade)
+  specializationId String
+  specialization   Specialization @relation(fields: [specializationId], references: [id], onDelete: Restrict)
+
+  @@id([lawyerProfileId, specializationId])
+  @@index([specializationId])
+  @@map("lawyer_specializations")
+}
+
+model LawyerAvailability {
+  id              String        @id @default(uuid())
+  lawyerProfileId String
+  lawyerProfile   LawyerProfile @relation(fields: [lawyerProfileId], references: [id], onDelete: Cascade)
+  dayOfWeek       Int // 0 = Sunday ... 6 = Saturday
+  startTime       String // HH:MM, 24h
+  endTime         String // HH:MM, 24h
+
+  @@index([lawyerProfileId])
+  @@map("lawyer_availability")
+}
+
+model LawyerCredential {
+  id              String        @id @default(uuid())
+  lawyerProfileId String
+  lawyerProfile   LawyerProfile @relation(fields: [lawyerProfileId], references: [id], onDelete: Cascade)
+  kind            String // ENROLLMENT_CERTIFICATE, BAR_COUNCIL_ID, DEGREE_CERTIFICATE, CERTIFICATE_OF_PRACTICE, OTHER
+  originalName    String
+  storedName      String // file inside CONNECT_PRIVATE_DIR/credentials, never served statically
+  mimeType        String
+  sizeBytes       Int
+  sha256          String
+  createdAt       DateTime      @default(now())
+
+  @@index([lawyerProfileId])
+  @@map("lawyer_credentials")
+}
+
+model ConsultationRequest {
+  id                     String          @id @default(uuid())
+  userId                 String
+  user                   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lawyerProfileId        String
+  lawyerProfile          LawyerProfile   @relation(fields: [lawyerProfileId], references: [id], onDelete: Cascade)
+  specializationId       String?
+  specialization         Specialization? @relation(fields: [specializationId], references: [id], onDelete: SetNull)
+  contactName            String
+  contactPhone           String
+  contactEmail           String
+  description            String          @db.Text
+  mode                   String // IN_PERSON, ONLINE
+  preferredDate          String // YYYY-MM-DD
+  preferredTime          String // HH:MM
+  proposedDate           String?
+  proposedTime           String?
+  scheduledDate          String?
+  scheduledTime          String?
+  rescheduleRequestedBy  String? // USER, LAWYER
+  lawyerMessage          String?         @db.Text
+  userMessage            String?         @db.Text
+  status                 String          @default("PENDING") // PENDING, ACCEPTED, REJECTED, RESCHEDULE_REQUESTED, CONFIRMED, COMPLETED, CANCELLED
+  cancelledBy            String? // USER, LAWYER
+  sharedDocumentId       String?
+  sharedDocument         Document?       @relation(fields: [sharedDocumentId], references: [id], onDelete: SetNull)
+  documentShareConsentAt DateTime?
+  documentShareRevokedAt DateTime?
+  analysisShareConsentAt DateTime? // separate consent to let the lawyer see and comment on the clause findings
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+  reviewComments         ClauseReviewComment[]
+
+  @@index([userId, status])
+  @@index([lawyerProfileId, status])
+  @@map("consultation_requests")
+}
+
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  body      String    @db.Text
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+model LawyerReport {
+  id              String        @id @default(uuid())
+  lawyerProfileId String
+  lawyerProfile   LawyerProfile @relation(fields: [lawyerProfileId], references: [id], onDelete: Cascade)
+  reporterId      String
+  reporter        User          @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  reason          String // INCORRECT_INFORMATION, IMPERSONATION, MISCONDUCT, INAPPROPRIATE_CONTENT, OTHER
+  details         String?       @db.Text
+  status          String        @default("OPEN") // OPEN, RESOLVED, DISMISSED
+  resolvedById    String?
+  resolution      String?       @db.Text
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([lawyerProfileId])
+  @@index([status])
+  @@map("lawyer_reports")
+}
+
+model AdminAuditLog {
+  id             String   @id @default(uuid())
+  adminId        String
+  admin          User     @relation(fields: [adminId], references: [id], onDelete: Restrict)
+  action         String
+  entityType     String // LAWYER_PROFILE, LAWYER_REPORT, SPECIALIZATION
+  entityId       String
+  previousStatus String?
+  newStatus      String?
+  reason         String?  @db.Text
+  createdAt      DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([adminId])
+  @@map("admin_audit_logs")
+}
+
+// Lawyer ↔ client comments on Legal Buddy's clause findings, scoped to one consultation.
+model ClauseReviewComment {
+  id                    String              @id @default(uuid())
+  consultationRequestId String
+  consultationRequest   ConsultationRequest @relation(fields: [consultationRequestId], references: [id], onDelete: Cascade)
+  clauseFindingId       String
+  clauseFinding         ClauseFinding       @relation(fields: [clauseFindingId], references: [id], onDelete: Cascade)
+  authorUserId          String
+  author                User                @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
+  authorRole            String // LAWYER, USER
+  verdict               String // ACCEPTABLE, NEEDS_CHANGE, COMMENT
+  comment               String              @db.Text
+  suggestedText         String?             @db.Text
+  createdAt             DateTime            @default(now())
+
+  @@index([consultationRequestId])
+  @@index([clauseFindingId])
+  @@map("clause_review_comments")
+}
+
+// A date the user chose to be reminded about an extracted obligation.
+model ObligationReminder {
+  id           String              @id @default(uuid())
+  obligationId String
+  obligation   ExtractedObligation @relation(fields: [obligationId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  remindOn     String // YYYY-MM-DD
+  note         String?
+  notifiedAt   DateTime?
+  createdAt    DateTime            @default(now())
+
+  @@unique([obligationId, userId])
+  @@index([remindOn, notifiedAt])
+  @@map("obligation_reminders")
 }

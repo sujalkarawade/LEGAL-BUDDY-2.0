@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
 import { useTheme } from '../../context/ThemeContext.js';
 import { Scale, User, LogOut, ChevronDown, Activity, Shield, Info, Sun, Moon } from 'lucide-react';
+import { NotificationBell } from '../connect/NotificationBell.js';
 
 export const Navbar: React.FC<{ sidebarCollapsed: boolean; onToggleSidebar: () => void }> = ({
   sidebarCollapsed,
@@ -134,6 +135,9 @@ export const Navbar: React.FC<{ sidebarCollapsed: boolean; onToggleSidebar: () =
           <span className="hidden-mobile">System</span>
           <Info size={14} style={{ color: 'var(--text-muted)' }} />
         </button>
+
+        {/* Legal Buddy Connect in-app notifications */}
+        <NotificationBell />
 
         {/* User menu */}
         <div style={{ position: 'relative' }}>

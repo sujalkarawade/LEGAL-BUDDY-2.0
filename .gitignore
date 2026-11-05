@@ -21,6 +21,9 @@ server/uploads/
 server/generated_docs/
 uploads/
 generated_docs/
+# Legal Buddy Connect private files (lawyer credentials, photos) — never commit
+server/private_uploads/
+private_uploads/
 
 # Logs
 npm-debug.log*
